@@ -1,0 +1,34 @@
+name: pharmago_app
+description: PharmaGo - Find. Order. Deliver. - Pharmacy locator & delivery app for Cameroon
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.2.0
+  dio: ^5.4.3
+  google_fonts: ^6.2.1
+  geolocator: ^12.0.0
+  image_picker: ^1.1.2
+  intl: ^0.20.2
+  ## Device Preview (pour le développement)
+  device_preview: ^1.3.1
+  cached_network_image: ^3.3.1
+  flutter_svg: ^2.0.10+1
+  google_generative_ai: ^0.4.6
+  flutter_markdown: ^0.7.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

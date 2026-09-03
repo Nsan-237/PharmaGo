@@ -1,0 +1,211 @@
+{
+  "users": [
+    {
+      "id": "usr-patient-1",
+      "email": "patient@pharmago.cm",
+      "passwordHash": "$2b$10$fB6UK68dPeoopCDlSv4HyOgRtFrByZjk8am2Uuu91Lw8FkkB6bTlO",
+      "fullName": "Paul Biya",
+      "phone": "+237699000111",
+      "role": "PATIENT",
+      "isApproved": true,
+      "createdAt": "2026-09-01T11:15:56.780Z"
+    },
+    {
+      "id": "usr-admin-1",
+      "email": "admin@pharmacie-centre.cm",
+      "passwordHash": "$2b$10$fB6UK68dPeoopCDlSv4HyOgRtFrByZjk8am2Uuu91Lw8FkkB6bTlO",
+      "fullName": "Dr. Marie Eto'o",
+      "phone": "+237677111222",
+      "role": "PHARMACY_ADMIN",
+      "isApproved": true,
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    },
+    {
+      "id": "usr-cashier-1",
+      "email": "cashier@pharmacie-centre.cm",
+      "passwordHash": "$2b$10$fB6UK68dPeoopCDlSv4HyOgRtFrByZjk8am2Uuu91Lw8FkkB6bTlO",
+      "fullName": "Samuel Nkono",
+      "phone": "+237699333444",
+      "role": "CASHIER",
+      "isApproved": true,
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    },
+    {
+      "id": "usr-agent-1",
+      "email": "driver@pharmago.cm",
+      "passwordHash": "$2b$10$fB6UK68dPeoopCDlSv4HyOgRtFrByZjk8am2Uuu91Lw8FkkB6bTlO",
+      "fullName": "Eric Mben",
+      "phone": "+237655888999",
+      "role": "DELIVERY_AGENT",
+      "isApproved": true,
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    },
+    {
+      "id": "usr-superadmin-1",
+      "email": "superadmin@pharmago.cm",
+      "passwordHash": "$2b$10$fB6UK68dPeoopCDlSv4HyOgRtFrByZjk8am2Uuu91Lw8FkkB6bTlO",
+      "fullName": "PharmaGo Super Admin",
+      "phone": "+237690000000",
+      "role": "PLATFORM_ADMIN",
+      "isApproved": true,
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    }
+  ],
+  "pharmacies": [
+    {
+      "id": "pharmacie-centre-akwa",
+      "name": "Pharmacie du Centre",
+      "slug": "pharmacie-du-centre-akwa",
+      "address": "Boulevard de la Liberté, Akwa",
+      "city": "Douala",
+      "quarter": "Akwa",
+      "latitude": 4.0511,
+      "longitude": 9.7085,
+      "phone": "+237233421100",
+      "email": "contact@pharmacie-centre.cm",
+      "licenseNo": "CAM-PH-2023-089",
+      "isApproved": true,
+      "isGuard247": true,
+      "rating": 4.8,
+      "openingHours": "24h/24",
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    },
+    {
+      "id": "pharmacie-cote-bonanjo",
+      "name": "Pharmacie de la Côte",
+      "slug": "pharmacie-de-la-cote-bonanjo",
+      "address": "Avenue de Général de Gaulle, Bonanjo",
+      "city": "Douala",
+      "quarter": "Bonanjo",
+      "latitude": 4.0435,
+      "longitude": 9.6872,
+      "phone": "+237233425511",
+      "email": "info@pharmacie-cote.cm",
+      "licenseNo": "CAM-PH-2022-045",
+      "isApproved": true,
+      "isGuard247": false,
+      "rating": 4.6,
+      "openingHours": "07:30 - 21:00",
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    },
+    {
+      "id": "pharmacie-bastos-yaounde",
+      "name": "Pharmacie de Bastos",
+      "slug": "pharmacie-de-bastos-yaounde",
+      "address": "Rue 1.820, Bastos",
+      "city": "Yaoundé",
+      "quarter": "Bastos",
+      "latitude": 3.8833,
+      "longitude": 11.5167,
+      "phone": "+237222201999",
+      "email": "bastos@pharmacies.cm",
+      "licenseNo": "CAM-PH-2021-112",
+      "isApproved": true,
+      "isGuard247": true,
+      "rating": 4.9,
+      "openingHours": "24h/24",
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    }
+  ],
+  "pharmacyStaff": [
+    {
+      "id": "st-1",
+      "pharmacyId": "pharmacie-centre-akwa",
+      "userId": "usr-admin-1",
+      "role": "PHARMACY_ADMIN"
+    },
+    {
+      "id": "st-2",
+      "pharmacyId": "pharmacie-centre-akwa",
+      "userId": "usr-cashier-1",
+      "role": "CASHIER"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod-1",
+      "pharmacyId": "pharmacie-centre-akwa",
+      "name": "Paracétamol Biogaran 500mg",
+      "category": "Analgésique",
+      "dosage": "500mg - Boîte de 16 comprimés",
+      "description": "Soulage la douleur et la fièvre.",
+      "price": 1200,
+      "stockQuantity": 150,
+      "requiresPrescription": false,
+      "batchNumber": "LOT-2025-A9",
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    },
+    {
+      "id": "prod-2",
+      "pharmacyId": "pharmacie-centre-akwa",
+      "name": "Coartem 80/480mg (Artemether + Lumefantrine)",
+      "category": "Antipaludéen",
+      "dosage": "Boîte de 6 comprimés",
+      "description": "Traitement du paludisme simple.",
+      "price": 3500,
+      "stockQuantity": 45,
+      "requiresPrescription": true,
+      "batchNumber": "LOT-2025-C12",
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    },
+    {
+      "id": "prod-3",
+      "pharmacyId": "pharmacie-centre-akwa",
+      "name": "Amoxicilline Sandoz 500mg",
+      "category": "Antibiotique",
+      "dosage": "500mg - Boîte de 12 gélules",
+      "description": "Antibiotique à large spectre.",
+      "price": 2800,
+      "stockQuantity": 80,
+      "requiresPrescription": true,
+      "batchNumber": "LOT-2024-X4",
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    },
+    {
+      "id": "prod-4",
+      "pharmacyId": "pharmacie-centre-akwa",
+      "name": "Vitamine C Effervescente 1000mg",
+      "category": "Vitamines",
+      "dosage": "Tube de 20 comprimés",
+      "description": "Forme et vitalité.",
+      "price": 1800,
+      "stockQuantity": 200,
+      "requiresPrescription": false,
+      "createdAt": "2026-09-01T11:15:56.781Z"
+    }
+  ],
+  "prescriptions": [],
+  "orders": [
+    {
+      "id": "ord-1",
+      "orderNumber": "PG-2026-0089",
+      "patientId": "usr-patient-1",
+      "pharmacyId": "pharmacie-centre-akwa",
+      "deliveryAgentId": "usr-agent-1",
+      "status": "IN_TRANSIT",
+      "totalAmount": 4700,
+      "deliveryAddress": "Bonapriso, Rue des Palmiers, Douala",
+      "deliveryLat": 4.0322,
+      "deliveryLng": 9.6954,
+      "paymentMethod": "MOMO",
+      "paymentStatus": "PAID",
+      "createdAt": "2026-09-01T11:15:56.781Z",
+      "items": [
+        {
+          "productId": "prod-1",
+          "productName": "Paracétamol Biogaran 500mg",
+          "unitPrice": 1200,
+          "quantity": 1,
+          "subtotal": 1200
+        },
+        {
+          "productId": "prod-2",
+          "productName": "Coartem 80/480mg",
+          "unitPrice": 3500,
+          "quantity": 1,
+          "subtotal": 3500
+        }
+      ]
+    }
+  ]
+}
