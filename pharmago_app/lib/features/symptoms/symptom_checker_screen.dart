@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/services/gemini_service.dart';
@@ -17,6 +19,7 @@ class _ChatMessage {
   final DateTime timestamp;
   final bool isTyping;
   final bool isStreaming;
+  final Uint8List? imageBytes;
 
   const _ChatMessage({
     required this.id,
@@ -25,6 +28,7 @@ class _ChatMessage {
     required this.timestamp,
     this.isTyping = false,
     this.isStreaming = false,
+    this.imageBytes,
   });
 
   _ChatMessage copyWith({String? text, bool? isTyping, bool? isStreaming}) {
@@ -35,6 +39,7 @@ class _ChatMessage {
       timestamp: timestamp,
       isTyping: isTyping ?? this.isTyping,
       isStreaming: isStreaming ?? this.isStreaming,
+      imageBytes: imageBytes,
     );
   }
 }
@@ -53,17 +58,29 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
     with TickerProviderStateMixin {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ImagePicker _imagePicker = ImagePicker();
   final List<_ChatMessage> _messages = [];
+
   bool _isLoading = false;
+  Uint8List? _pendingImageBytes;
+  String? _pendingImageMime;
+
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  // Suggested quick symptom chips
-  final List<String> _quickSymptoms = [
+  final List<String> _quickSymptomsEn = [
     'Fever & chills',
     'Headache',
     'Cough & sore throat',
     'Stomach pain',
+    'Fatigue',
+  ];
+
+  final List<String> _quickSymptomsFr = [
+    'Fièvre & frissons',
+    'Mal de tête',
+    'Toux & mal de gorge',
+    'Douleur abdominale',
     'Fatigue',
   ];
 
@@ -73,14 +90,14 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
 
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+    _pulseAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Greeting message from PharmAI
-    Future.delayed(const Duration(milliseconds: 600), () {
+    // Greeting from PharmAI
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (!mounted) return;
       final isFr = ref.read(localeProvider) == AppLanguage.fr;
       setState(() {
@@ -88,8 +105,8 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
           _ChatMessage(
             id: 'greeting',
             text: isFr
-                ? '👋 Bonjour ! Je suis **PharmAI**, votre assistant médical intelligent.\n\nDécrivez vos symptômes et je vous aiderai à comprendre ce qui pourrait se passer — en suggérant des causes possibles et des conseils simples.\n\n*Comment puis-je vous aider aujourd\'hui ?*'
-                : '👋 Hello! I\'m **PharmAI**, your intelligent medical assistant.\n\nDescribe your symptoms and I\'ll help you understand what might be happening — suggesting possible causes and simple advice.\n\n*How can I help you today?*',
+                ? '👋 Bonjour ! Je suis **PharmAI**, votre assistant médical intelligent propulsé par Gemini AI.\n\nDécrivez vos symptômes en texte ou **envoyez une photo** (rougeur, plaie, médicament…) et je vous aiderai.\n\n*Comment puis-je vous aider aujourd\'hui ?*'
+                : '👋 Hello! I\'m **PharmAI**, your intelligent medical assistant powered by Gemini AI.\n\nDescribe your symptoms in text or **send a photo** (rash, wound, medication label…) and I\'ll help you understand what\'s happening.\n\n*How can I help you today?*',
             isUser: false,
             timestamp: DateTime.now(),
           ),
@@ -106,53 +123,161 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
     super.dispose();
   }
 
+  // ─── Image Picker ────────────────────────────────────────────────────────
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final xFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (xFile == null) return;
+      final bytes = await xFile.readAsBytes();
+      final mime = xFile.mimeType ?? 'image/jpeg';
+      setState(() {
+        _pendingImageBytes = bytes;
+        _pendingImageMime = mime;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not load image: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showImageSourceSheet(bool isFr) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isFr ? 'Envoyer une image' : 'Send an image',
+                style: GoogleFonts.sora(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                isFr
+                    ? 'PharmAI analysera votre image médicalement'
+                    : 'PharmAI will analyze your image medically',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ImageSourceButton(
+                      icon: Icons.camera_alt_rounded,
+                      label: isFr ? 'Caméra' : 'Camera',
+                      color: AppColors.primary,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage(ImageSource.camera);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ImageSourceButton(
+                      icon: Icons.photo_library_rounded,
+                      label: isFr ? 'Galerie' : 'Gallery',
+                      color: const Color(0xFF8B5CF6),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImage(ImageSource.gallery);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Send Message ─────────────────────────────────────────────────────────
+
   Future<void> _sendMessage([String? quickMessage]) async {
     final text = (quickMessage ?? _textController.text).trim();
-    if (text.isEmpty || _isLoading) return;
+    final imageBytes = _pendingImageBytes;
+    final imageMime = _pendingImageMime;
 
+    if (text.isEmpty && imageBytes == null) return;
+    if (_isLoading) return;
+
+    // Add user message (with optional image)
     final userMsg = _ChatMessage(
       id: 'user-${DateTime.now().millisecondsSinceEpoch}',
       text: text,
       isUser: true,
       timestamp: DateTime.now(),
+      imageBytes: imageBytes,
     );
 
     final typingMsgId = 'typing-${DateTime.now().millisecondsSinceEpoch}';
-    final typingMsg = _ChatMessage(
-      id: typingMsgId,
-      text: '',
-      isUser: false,
-      timestamp: DateTime.now(),
-      isTyping: true,
-    );
 
     setState(() {
       _messages.add(userMsg);
       if (quickMessage == null) _textController.clear();
+      _pendingImageBytes = null;
+      _pendingImageMime = null;
       _isLoading = true;
-      _messages.add(typingMsg);
+      _messages.add(
+        _ChatMessage(
+          id: typingMsgId,
+          text: '',
+          isUser: false,
+          timestamp: DateTime.now(),
+          isTyping: true,
+        ),
+      );
     });
 
     _scrollToBottom();
 
     try {
-      // Get streaming response from Gemini
       final streamId = 'ai-${DateTime.now().millisecondsSinceEpoch}';
-      String accumulatedText = '';
+      String accumulated = '';
       bool replacedTyping = false;
 
-      await for (final chunk in GeminiService.streamSymptomAnalysis(text)) {
+      final stream = GeminiService.streamSymptomAnalysis(
+        text,
+        imageBytes: imageBytes,
+        imageMimeType: imageMime,
+      );
+
+      await for (final chunk in stream) {
         if (!mounted) break;
-        accumulatedText += chunk;
+        accumulated += chunk;
 
         setState(() {
           if (!replacedTyping) {
-            // Replace typing indicator with streaming message
             final idx = _messages.indexWhere((m) => m.id == typingMsgId);
             if (idx != -1) {
               _messages[idx] = _ChatMessage(
                 id: streamId,
-                text: accumulatedText,
+                text: accumulated,
                 isUser: false,
                 timestamp: DateTime.now(),
                 isStreaming: true,
@@ -160,29 +285,24 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
             }
             replacedTyping = true;
           } else {
-            // Update streaming message
             final idx = _messages.indexWhere((m) => m.id == streamId);
             if (idx != -1) {
-              _messages[idx] = _messages[idx].copyWith(text: accumulatedText);
+              _messages[idx] = _messages[idx].copyWith(text: accumulated);
             }
           }
         });
 
         _scrollToBottom();
-        await Future.delayed(const Duration(milliseconds: 20));
       }
 
-      // Mark streaming as complete
+      // Finalize
       if (mounted) {
         setState(() {
-          final streamIdx = _messages.indexWhere(
-            (m) => m.id == streamId || m.id == typingMsgId,
-          );
-          if (streamIdx != -1) {
-            _messages[streamIdx] = _messages[streamIdx].copyWith(
-              text: accumulatedText.isNotEmpty
-                  ? accumulatedText
-                  : GeminiService.analyzeSymptoms(text) as String,
+          final idx = _messages.indexWhere(
+              (m) => m.id == streamId || m.id == typingMsgId);
+          if (idx != -1) {
+            _messages[idx] = _messages[idx].copyWith(
+              text: accumulated,
               isStreaming: false,
               isTyping: false,
             );
@@ -192,19 +312,8 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
       }
     } catch (e) {
       if (mounted) {
-        // Remove typing indicator and show error
         setState(() {
           _messages.removeWhere((m) => m.id == typingMsgId);
-          _messages.add(
-            _ChatMessage(
-              id: 'error-${DateTime.now().millisecondsSinceEpoch}',
-              text: ref.read(localeProvider) == AppLanguage.fr
-                  ? 'Désolé, une erreur est survenue. Veuillez réessayer.'
-                  : 'Sorry, something went wrong. Please try again.',
-              isUser: false,
-              timestamp: DateTime.now(),
-            ),
-          );
           _isLoading = false;
         });
       }
@@ -215,13 +324,15 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent + 200,
+          _scrollController.position.maxScrollExtent + 300,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
     });
   }
+
+  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -233,37 +344,38 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
       appBar: _buildAppBar(isFr),
       body: Column(
         children: [
-          // Gemini powered banner
-          _GeminiPoweredBanner(isFr: isFr),
-
-          // Messages
+          _GeminiStatusBanner(isFr: isFr),
           Expanded(
-            child: _messages.isEmpty
-                ? _EmptyState(isFr: isFr)
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    itemCount: _messages.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == _messages.length) {
-                        return _buildDisclaimerCard(isFr);
-                      }
-                      final msg = _messages[index];
-                      return _buildMessageBubble(msg);
-                    },
-                  ),
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              itemCount: _messages.length + 1,
+              itemBuilder: (context, index) {
+                if (index == _messages.length) {
+                  return _buildDisclaimerCard(isFr);
+                }
+                return _buildBubble(_messages[index], isFr);
+              },
+            ),
           ),
 
-          // Quick symptom chips (only when no messages beyond greeting)
+          // Quick symptom chips (only on first load)
           if (_messages.length <= 1 && !_isLoading)
             _QuickSymptomsRow(
-              symptoms: isFr
-                  ? ['Fièvre & frissons', 'Mal de tête', 'Toux & mal de gorge', 'Douleur abdominale', 'Fatigue']
-                  : _quickSymptoms,
+              symptoms: isFr ? _quickSymptomsFr : _quickSymptomsEn,
               onTap: _sendMessage,
             ),
 
-          // Input area
+          // Pending image preview
+          if (_pendingImageBytes != null)
+            _PendingImagePreview(
+              imageBytes: _pendingImageBytes!,
+              onRemove: () => setState(() {
+                _pendingImageBytes = null;
+                _pendingImageMime = null;
+              }),
+            ),
+
           _buildInputBar(isFr),
         ],
       ),
@@ -274,7 +386,6 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
-      shadowColor: Colors.black.withValues(alpha: 0.06),
       surfaceTintColor: Colors.transparent,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded,
@@ -283,7 +394,7 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
       ),
       title: Row(
         children: [
-          // PharmAI avatar
+          // PharmAI Gemini avatar
           Container(
             width: 36,
             height: 36,
@@ -299,11 +410,12 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
                   color: AppColors.primary.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
-                )
+                ),
               ],
             ),
             child: const Center(
-              child: Text('✦', style: TextStyle(color: Colors.white, fontSize: 16)),
+              child: Text('✦',
+                  style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
           ),
           const SizedBox(width: 10),
@@ -330,10 +442,15 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    isFr ? 'En ligne · Assistant IA' : 'Online · AI Assistant',
+                    GeminiService.isUsingRealApi
+                        ? (isFr ? 'Gemini AI · En ligne' : 'Gemini AI · Live')
+                        : (isFr ? 'Mode démo' : 'Demo mode'),
                     style: GoogleFonts.inter(
                       fontSize: 10,
-                      color: AppColors.textMuted,
+                      color: GeminiService.isUsingRealApi
+                          ? AppColors.success
+                          : AppColors.textMuted,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -343,12 +460,15 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
         ],
       ),
       actions: [
+        // Reset chat
         IconButton(
-          icon: const Icon(Icons.refresh_rounded, color: AppColors.textMuted, size: 22),
+          icon: const Icon(Icons.refresh_rounded,
+              color: AppColors.textMuted, size: 22),
           tooltip: isFr ? 'Nouvelle conversation' : 'New conversation',
           onPressed: () {
             setState(() {
               _messages.clear();
+              _pendingImageBytes = null;
               _isLoading = false;
             });
             Future.delayed(const Duration(milliseconds: 200), () {
@@ -356,10 +476,10 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
               setState(() {
                 _messages.add(
                   _ChatMessage(
-                    id: 'greeting-${DateTime.now().millisecondsSinceEpoch}',
+                    id: 'greeting-new',
                     text: isFr
-                        ? '👋 Bonjour ! Je suis **PharmAI**. *Comment puis-je vous aider aujourd\'hui ?*'
-                        : '👋 Hello! I\'m **PharmAI**. *How can I help you today?*',
+                        ? '👋 Nouvelle session. Comment puis-je vous aider ?'
+                        : '👋 New session. How can I help you today?',
                     isUser: false,
                     timestamp: DateTime.now(),
                   ),
@@ -373,15 +493,11 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
     );
   }
 
-  Widget _buildMessageBubble(_ChatMessage msg) {
+  Widget _buildBubble(_ChatMessage msg, bool isFr) {
     if (msg.isTyping) {
       return _TypingBubble(pulseAnimation: _pulseAnimation);
     }
-
-    if (msg.isUser) {
-      return _UserBubble(message: msg);
-    }
-
+    if (msg.isUser) return _UserBubble(message: msg);
     return _AiBubble(message: msg);
   }
 
@@ -404,8 +520,8 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
           Expanded(
             child: Text(
               isFr
-                  ? 'PharmAI est un assistant IA à titre informatif uniquement. Il ne remplace pas un diagnostic médical professionnel. Consultez toujours un médecin ou pharmacien agréé.'
-                  : 'PharmAI is an AI assistant for informational purposes only. It does not replace professional medical diagnosis. Always consult a licensed doctor or pharmacist.',
+                  ? 'PharmAI est un assistant IA à titre informatif uniquement. Il ne remplace pas un diagnostic médical professionnel.'
+                  : 'PharmAI is an AI assistant for informational purposes only. It does not replace professional medical diagnosis.',
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
@@ -434,12 +550,42 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // Image attach button
+          GestureDetector(
+            onTap: () => _showImageSourceSheet(isFr),
+            child: Container(
+              width: 42,
+              height: 42,
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: _pendingImageBytes != null
+                    ? AppColors.primary.withValues(alpha: 0.15)
+                    : AppColors.background,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: _pendingImageBytes != null
+                      ? AppColors.primary
+                      : AppColors.border,
+                ),
+              ),
+              child: Icon(
+                Icons.add_photo_alternate_rounded,
+                size: 20,
+                color: _pendingImageBytes != null
+                    ? AppColors.primary
+                    : AppColors.textMuted,
+              ),
+            ),
+          ),
+
+          // Text input
           Expanded(
             child: Container(
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FFFE),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(22),
                 border: Border.all(
                   color: _isLoading
                       ? AppColors.primary.withValues(alpha: 0.4)
@@ -450,7 +596,7 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
                 controller: _textController,
                 enabled: !_isLoading,
                 onSubmitted: (_) => _sendMessage(),
-                maxLines: 3,
+                maxLines: 4,
                 minLines: 1,
                 decoration: InputDecoration(
                   hintText: isFr
@@ -475,20 +621,23 @@ class _SymptomCheckerScreenState extends ConsumerState<SymptomCheckerScreen>
   }
 }
 
-// ─── Sub-Widgets ─────────────────────────────────────────────────────────────
+// ─── Widgets ──────────────────────────────────────────────────────────────────
 
-class _GeminiPoweredBanner extends StatelessWidget {
+class _GeminiStatusBanner extends StatelessWidget {
   final bool isFr;
-  const _GeminiPoweredBanner({required this.isFr});
+  const _GeminiStatusBanner({required this.isFr});
 
   @override
   Widget build(BuildContext context) {
+    final isLive = GeminiService.isUsingRealApi;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1A73E8), Color(0xFF0F9B8E)],
+          colors: isLive
+              ? [const Color(0xFF1A73E8), const Color(0xFF0F9B8E)]
+              : [const Color(0xFF64748B), const Color(0xFF94A3B8)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -496,62 +645,97 @@ class _GeminiPoweredBanner extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('✦', style: TextStyle(color: Colors.white70, fontSize: 11)),
+          Icon(
+            isLive ? Icons.bolt_rounded : Icons.info_outline_rounded,
+            color: Colors.white,
+            size: 13,
+          ),
           const SizedBox(width: 6),
           Text(
-            isFr
-                ? 'Propulsé par Gemini AI • Google DeepMind'
-                : 'Powered by Gemini AI • Google DeepMind',
+            isLive
+                ? (isFr
+                    ? 'Propulsé par Gemini AI · Google DeepMind · IA en direct'
+                    : 'Powered by Gemini AI · Google DeepMind · Live AI')
+                : (isFr ? 'Mode démo — réponses prédéfinies' : 'Demo mode — predefined responses'),
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: Colors.white,
-              letterSpacing: 0.3,
+              letterSpacing: 0.2,
             ),
           ),
-          const SizedBox(width: 6),
-          const Text('✦', style: TextStyle(color: Colors.white70, fontSize: 11)),
         ],
       ),
     );
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  final bool isFr;
-  const _EmptyState({required this.isFr});
+class _PendingImagePreview extends StatelessWidget {
+  final Uint8List imageBytes;
+  final VoidCallback onRemove;
+
+  const _PendingImagePreview(
+      {required this.imageBytes, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      color: Colors.white,
+      child: Row(
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF4285F4), Color(0xFF0F9B8E)],
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.memory(
+                  imageBytes,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                ),
               ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
+              Positioned(
+                top: -4,
+                right: -4,
+                child: GestureDetector(
+                  onTap: onRemove,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close, color: Colors.white, size: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Image ready to send',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                Text(
+                  'PharmAI will analyze it with Gemini Vision',
+                  style: GoogleFonts.inter(
+                      fontSize: 11, color: AppColors.textMuted),
                 ),
               ],
             ),
-            child: const Center(
-              child: Text('✦', style: TextStyle(color: Colors.white, fontSize: 32)),
-            ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            isFr ? 'Chargement de PharmAI...' : 'Loading PharmAI...',
-            style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
-          ),
+          const Icon(Icons.auto_awesome_rounded,
+              color: AppColors.primary, size: 18),
         ],
       ),
     );
@@ -573,7 +757,8 @@ class _TypingBubble extends StatelessWidget {
           const SizedBox(width: 8),
           Container(
             margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: const BorderRadius.only(
@@ -591,37 +776,28 @@ class _TypingBubble extends StatelessWidget {
                 ),
               ],
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(3, (i) {
-                return AnimatedBuilder(
-                  animation: pulseAnimation,
-                  builder: (context, _) {
+            child: AnimatedBuilder(
+              animation: pulseAnimation,
+              builder: (context, _) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(3, (i) {
                     return Container(
-                      margin: EdgeInsets.only(right: i < 2 ? 4 : 0),
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.3, end: 1.0),
-                        duration: Duration(milliseconds: 400 + i * 150),
-                        curve: Curves.easeInOut,
-                        builder: (context, value, _) {
-                          return Opacity(
-                            opacity: pulseAnimation.value,
-                            child: Container(
-                              width: 7,
-                              height: 7,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(
-                                    alpha: 0.4 + (0.6 * pulseAnimation.value)),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          );
-                        },
+                      margin: EdgeInsets.only(right: i < 2 ? 5 : 0),
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(
+                          alpha: (0.3 + 0.7 *
+                                  ((pulseAnimation.value + i * 0.33) % 1.0))
+                              .clamp(0.3, 1.0),
+                        ),
+                        shape: BoxShape.circle,
                       ),
                     );
-                  },
+                  }),
                 );
-              }),
+              },
             ),
           ),
         ],
@@ -640,31 +816,52 @@ class _UserBubble extends StatelessWidget {
       alignment: Alignment.centerRight,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12, left: 48),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0EA5E9), Color(0xFF0F9B8E)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
-            bottomRight: Radius.circular(4),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.25),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Image preview if user sent image
+            if (message.imageBytes != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.memory(
+                  message.imageBytes!,
+                  width: 180,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
+            if (message.text.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0EA5E9), Color(0xFF0F9B8E)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(4),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  message.text,
+                  style: GoogleFonts.inter(
+                      fontSize: 13, color: Colors.white, height: 1.4),
+                ),
+              ),
           ],
-        ),
-        child: Text(
-          message.text,
-          style: GoogleFonts.inter(
-              fontSize: 13, color: Colors.white, height: 1.4),
         ),
       ),
     );
@@ -685,93 +882,79 @@ class _AiBubble extends StatelessWidget {
           _PharmAIAvatar(),
           const SizedBox(width: 8),
           Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 12, right: 20),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(4),
-                      topRight: Radius.circular(16),
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                    border: Border.all(
-                      color: message.isStreaming
-                          ? AppColors.primary.withValues(alpha: 0.3)
-                          : AppColors.border,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12, right: 20),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+                border: Border.all(
+                  color: message.isStreaming
+                      ? AppColors.primary.withValues(alpha: 0.4)
+                      : AppColors.border,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      MarkdownBody(
-                        data: message.text,
-                        styleSheet: MarkdownStyleSheet(
-                          p: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppColors.textDark,
-                            height: 1.45,
-                          ),
-                          strong: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primaryDark,
-                          ),
-                          em: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontStyle: FontStyle.italic,
-                            color: AppColors.textMuted,
-                          ),
-                          listBullet: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppColors.primary,
-                          ),
-                          blockquote: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: AppColors.textMuted,
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  MarkdownBody(
+                    data: message.text,
+                    styleSheet: MarkdownStyleSheet(
+                      p: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: AppColors.textDark,
+                          height: 1.45),
+                      strong: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryDark,
+                      ),
+                      em: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.textMuted,
+                      ),
+                      listBullet: GoogleFonts.inter(
+                          fontSize: 13, color: AppColors.primary),
+                    ),
+                  ),
+                  if (message.isStreaming) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primary.withValues(alpha: 0.7),
+                            ),
                           ),
                         ),
-                      ),
-                      if (message.isStreaming) ...[
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            SizedBox(
-                              width: 10,
-                              height: 10,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 1.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.primary.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Generating...',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(width: 6),
+                        Text(
+                          'Gemini is generating...',
+                          style: GoogleFonts.inter(
+                              fontSize: 10, color: AppColors.textMuted),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ],
@@ -796,7 +979,8 @@ class _PharmAIAvatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: const Center(
-        child: Text('✦', style: TextStyle(color: Colors.white, fontSize: 13)),
+        child: Text('✦',
+            style: TextStyle(color: Colors.white, fontSize: 13)),
       ),
     );
   }
@@ -810,37 +994,83 @@ class _QuickSymptomsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: symptoms.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final symptom = symptoms[index];
-          return GestureDetector(
-            onTap: () => onTap(symptom),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.3),
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: SizedBox(
+        height: 38,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: symptoms.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            return GestureDetector(
+              onTap: () => onTap(symptoms[index]),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  symptoms[index],
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
-              child: Text(
-                symptom,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageSourceButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ImageSourceButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: color,
               ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
@@ -862,7 +1092,8 @@ class _SendButton extends StatelessWidget {
         height: 46,
         decoration: BoxDecoration(
           gradient: isLoading
-              ? const LinearGradient(colors: [Color(0xFFCBD5E1), Color(0xFFCBD5E1)])
+              ? const LinearGradient(
+                  colors: [Color(0xFFCBD5E1), Color(0xFFCBD5E1)])
               : const LinearGradient(
                   colors: [Color(0xFF1A73E8), Color(0xFF0F9B8E)],
                   begin: Alignment.topLeft,
@@ -886,7 +1117,8 @@ class _SendButton extends StatelessWidget {
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 )
               : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
