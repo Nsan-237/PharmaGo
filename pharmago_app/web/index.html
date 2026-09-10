@@ -31,6 +31,19 @@
 
   <title>pharmago_app</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Google Maps JavaScript API — required for google_maps_flutter web -->
+  <script>
+    // API key is injected via flutter --dart-define=GOOGLE_MAPS_API_KEY=...
+    // Falls back gracefully if not provided (map shows as disabled)
+    window.googleMapsApiKey = '%%GOOGLE_MAPS_API_KEY%%';
+  </script>
+  <script>
+    function initGoogleMaps() {
+      // Called by the Maps JS API after it loads
+      if (window.onGoogleMapsLoaded) window.onGoogleMapsLoaded();
+    }
+  </script>
 </head>
 <body>
   <!--

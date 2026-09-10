@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/mock_data/mock_data.dart';
-import '../../core/widgets/map_preview_card.dart';
+import '../../core/widgets/adaptive_map_view.dart';
 
 class SearchResultsScreen extends ConsumerStatefulWidget {
   const SearchResultsScreen({super.key});
@@ -16,6 +16,7 @@ class SearchResultsScreen extends ConsumerStatefulWidget {
 
 class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
   final TextEditingController _searchController = TextEditingController(text: 'Amoxicillin 500mg');
+  String _selectedCity = 'Tous'; // 'Tous', 'Yaoundé', 'Douala'
 
   @override
   void dispose() {
@@ -27,6 +28,12 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
   Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
     final isFr = lang == AppLanguage.fr;
+
+    final filteredPharmacies = mockPharmacies.where((p) {
+      if (_selectedCity == 'Yaoundé') return p.city == 'Yaoundé';
+      if (_selectedCity == 'Douala') return p.city == 'Douala';
+      return true;
+    }).toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -54,7 +61,7 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
           // Search Input Bar with Clear Button
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -68,11 +75,28 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
             ),
           ),
 
+          // City Filter Chips (Tous / Yaoundé / Douala)
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Row(
+              children: [
+                _buildCityChip('Tous', isFr ? 'Toutes les villes' : 'All Cities'),
+                const SizedBox(width: 8),
+                _buildCityChip('Yaoundé', 'Yaoundé (5)'),
+                const SizedBox(width: 8),
+                _buildCityChip('Douala', 'Douala (5)'),
+              ],
+            ),
+          ),
+
           // Pharmacies Found Count
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
             child: Text(
-              isFr ? '15 pharmacies trouvées' : '15 pharmacies found',
+              isFr
+                  ? '${filteredPharmacies.length} pharmacies trouvées à ${_selectedCity == "Tous" ? "Cameroun" : _selectedCity}'
+                  : '${filteredPharmacies.length} pharmacies found in ${_selectedCity == "Tous" ? "Cameroon" : _selectedCity}',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -81,30 +105,56 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
             ),
           ),
 
-          // Map View with Markers
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: MapPreviewCard(
-              height: 140,
+          // Live OpenStreetMap with Multiple Pharmacy Markers
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: AdaptiveMapView(
+              height: 145,
               showRoute: false,
+              title: '${filteredPharmacies.length} Pharmacies • ${_selectedCity == "Tous" ? "Yaoundé & Douala" : _selectedCity}',
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // Pharmacy Cards List
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              itemCount: mockPharmacies.length,
+              itemCount: filteredPharmacies.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
-                final pharma = mockPharmacies[index];
+                final pharma = filteredPharmacies[index];
                 return _SearchResultCard(pharmacy: pharma, isFr: isFr);
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCityChip(String cityKey, String label) {
+    final isSelected = _selectedCity == cityKey;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedCity = cityKey),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB),
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : AppColors.textDark,
+          ),
+        ),
       ),
     );
   }
@@ -145,20 +195,76 @@ class _SearchResultCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        pharmacy.name,
+                        style: GoogleFonts.sora(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ),
+                    // City Tag Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: pharmacy.city == 'Yaoundé'
+                            ? const Color(0xFFEFF6FF)
+                            : const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: pharmacy.city == 'Yaoundé'
+                              ? const Color(0xFF93C5FD)
+                              : const Color(0xFF86EFAC),
+                        ),
+                      ),
+                      child: Text(
+                        pharmacy.city,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: pharmacy.city == 'Yaoundé'
+                              ? const Color(0xFF1D4ED8)
+                              : const Color(0xFF15803D),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
                 Text(
-                  pharmacy.name,
-                  style: GoogleFonts.sora(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
+                  pharmacy.address,
+                  style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  '${pharmacy.distanceKm} km • ${pharmacy.isOpen ? (isFr ? "Ouvert" : "Open") : (isFr ? "Fermé" : "Closed")}',
-                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textBody),
+                Row(
+                  children: [
+                    Text(
+                      '${pharmacy.distanceKm} km • ${pharmacy.isOpen ? (isFr ? "Ouvert" : "Open") : (isFr ? "Fermé" : "Closed")}',
+                      style: GoogleFonts.inter(fontSize: 11, color: AppColors.textBody, fontWeight: FontWeight.w500),
+                    ),
+                    if (pharmacy.isOnDuty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isFr ? 'De garde' : 'On duty',
+                          style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     Container(
@@ -188,13 +294,14 @@ class _SearchResultCard extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
 
           // Request Button
           ElevatedButton(
             onPressed: () => context.go('/pharmacy-details'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,

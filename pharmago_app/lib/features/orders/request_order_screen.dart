@@ -1,7 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/widgets/app_toast.dart';
@@ -15,7 +17,10 @@ class RequestOrderScreen extends ConsumerStatefulWidget {
 
 class _RequestOrderScreenState extends ConsumerState<RequestOrderScreen> {
   int _quantity = 1;
-  bool _hasUploadedRx = true;
+  Uint8List? _rxImageBytes;
+  String? _rxImageName;
+  String? _rxImageSize;
+  final ImagePicker _picker = ImagePicker();
   String _deliveryOption = 'home'; // 'pickup' or 'home'
 
   final int _unitPrice = 1200;
@@ -30,6 +35,122 @@ class _RequestOrderScreenState extends ConsumerState<RequestOrderScreen> {
     return price.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (Match m) => '${m[1]} ',
+    );
+  }
+
+  Future<void> _pickPrescription(ImageSource source) async {
+    try {
+      final xFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 85,
+      );
+      if (xFile == null) return;
+
+      final bytes = await xFile.readAsBytes();
+      final sizeKb = (bytes.lengthInBytes / 1024).round();
+      final sizeStr = sizeKb > 1024
+          ? '${(sizeKb / 1024).toStringAsFixed(1)} MB'
+          : '$sizeKb KB';
+
+      setState(() {
+        _rxImageBytes = bytes;
+        _rxImageName = xFile.name;
+        _rxImageSize = sizeStr;
+      });
+
+      if (mounted) {
+        final isFr = ref.read(localeProvider) == AppLanguage.fr;
+        AppToast.show(
+          context,
+          message: isFr
+              ? 'Ordonnance ajoutée : ${xFile.name}'
+              : 'Prescription attached: ${xFile.name}',
+          type: ToastType.success,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(
+          context,
+          message: 'Erreur: $e',
+          type: ToastType.error,
+        );
+      }
+    }
+  }
+
+  void _showImageSourceSheet(bool isFr) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isFr ? 'Téléverser une ordonnance' : 'Upload Prescription',
+                style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                isFr
+                    ? 'Prenez une photo claire ou choisissez depuis vos fichiers'
+                    : 'Take a clear photo or choose from files',
+                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(color: AppColors.primary),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _pickPrescription(ImageSource.camera);
+                      },
+                      icon: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                      label: Text(
+                        isFr ? 'Appareil photo' : 'Camera',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.primary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _pickPrescription(ImageSource.gallery);
+                      },
+                      icon: const Icon(Icons.photo_library_rounded, color: Colors.white),
+                      label: Text(
+                        isFr ? 'Galerie / Fichiers' : 'Gallery / Files',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -149,18 +270,9 @@ class _RequestOrderScreenState extends ConsumerState<RequestOrderScreen> {
             const SizedBox(height: 10),
 
             // Upload Box / File Chip
-            if (!_hasUploadedRx)
+            if (_rxImageBytes == null)
               GestureDetector(
-                onTap: () {
-                  setState(() => _hasUploadedRx = true);
-                  AppToast.show(
-                    context,
-                    message: ref.read(localeProvider) == AppLanguage.fr
-                        ? 'Ordonnance téléversée avec succès'
-                        : 'Prescription uploaded successfully',
-                    type: ToastType.success,
-                  );
-                },
+                onTap: () => _showImageSourceSheet(ref.read(localeProvider) == AppLanguage.fr),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 24),
@@ -171,11 +283,18 @@ class _RequestOrderScreenState extends ConsumerState<RequestOrderScreen> {
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.cloud_upload_outlined, color: AppColors.primary, size: 32),
+                      const Icon(Icons.cloud_upload_outlined, color: AppColors.primary, size: 34),
                       const SizedBox(height: 8),
                       Text(
                         context.tr('order.tapToUpload', ref: ref),
                         style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        ref.read(localeProvider) == AppLanguage.fr
+                            ? 'Format JPG, PNG, PDF acceptés'
+                            : 'JPG, PNG, PDF formats accepted',
+                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
                       ),
                     ],
                   ),
@@ -183,35 +302,66 @@ class _RequestOrderScreenState extends ConsumerState<RequestOrderScreen> {
               )
             else
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.success.withValues(alpha: 0.4), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.success.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(8),
+                    // Real Thumbnail Preview
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.memory(
+                        _rxImageBytes!,
+                        width: 54,
+                        height: 54,
+                        fit: BoxFit.cover,
                       ),
-                      child: const Icon(Icons.description_outlined, color: AppColors.primary, size: 20),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('prescription.jpg', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
-                          Text('(0.8 MB)', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
+                          Row(
+                            children: [
+                              const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                ref.read(localeProvider) == AppLanguage.fr ? 'Ordonnance jointe' : 'Prescription attached',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.success),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _rxImageName ?? 'prescription.jpg',
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (_rxImageSize != null)
+                            Text(_rxImageSize!, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.cancel_outlined, color: AppColors.error, size: 20),
-                      onPressed: () => setState(() => _hasUploadedRx = false),
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 22),
+                      tooltip: ref.read(localeProvider) == AppLanguage.fr ? 'Supprimer' : 'Remove',
+                      onPressed: () => setState(() {
+                        _rxImageBytes = null;
+                        _rxImageName = null;
+                        _rxImageSize = null;
+                      }),
                     ),
                   ],
                 ),

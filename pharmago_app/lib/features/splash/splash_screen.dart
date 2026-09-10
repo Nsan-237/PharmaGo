@@ -97,57 +97,69 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // PharmaGo Icon Box
+                        // Official Pharma Finder Go Logo Container (Seamless integration)
                         Container(
-                          width: 88,
-                          height: 88,
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0F9B8E), Color(0xFF14B8A6)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              width: 1.5,
                             ),
-                            borderRadius: BorderRadius.circular(26),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.4),
+                                color: Colors.black.withValues(alpha: 0.15),
                                 blurRadius: 24,
-                                offset: const Offset(0, 10),
+                                offset: const Offset(0, 8),
                               ),
                             ],
                           ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.local_pharmacy_rounded,
-                              size: 48,
-                              color: Colors.white,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              width: 240,
+                              height: 140,
+                              fit: BoxFit.contain,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
 
-                        // App Name
+                        // Official Brand Name with proper spacing
                         Text(
-                          'PharmaGo',
+                          'Pharma Finder Go',
                           style: GoogleFonts.sora(
-                            fontSize: 34,
+                            fontSize: 26,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
-                            letterSpacing: -0.5,
+                            letterSpacing: 0.5,
                           ),
                         ),
                         const SizedBox(height: 8),
 
-                        // Tagline
+                        // Subtitle
                         Text(
                           isFr
-                              ? 'Trouvez. Commandez. Livrez.'
-                              : 'Find. Order. Deliver.',
+                              ? 'Trouver • Commander • Recevoir'
+                              : 'Find • Order • Get It',
                           style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withValues(alpha: 0.7),
-                            letterSpacing: 0.5,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF6EE7B7),
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isFr
+                              ? 'Vos médicaments plus proches de vous !'
+                              : 'Medicines, closer to you!',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.normal,
+                            color: Colors.white.withValues(alpha: 0.85),
                           ),
                         ),
                       ],

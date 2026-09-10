@@ -4,6 +4,8 @@ const Map<String, String> translationsEn = {
   'app.tagline': 'Find. Order. Deliver.',
   'onboarding.findTitle': 'Find Nearby Pharmacies',
   'onboarding.findDesc': 'Search medicines and locate pharmacies near you in Cameroon.',
+  'onboarding.orderTitle': 'Order Your Medicines',
+  'onboarding.orderDesc': 'Request your medications or upload your prescription with ease.',
   'onboarding.stockTitle': 'Real Stock Confirmation',
   'onboarding.stockDesc': 'Pharmacist confirms real availability before your order is finalized.',
   'onboarding.deliverTitle': 'Fast Delivery',
@@ -62,7 +64,8 @@ const Map<String, String> translationsEn = {
   'search.resultsTitle': 'Search Results',
   'search.pharmaciesFound': 'pharmacies found',
 
-  // Pharmacy Details
+  // Pharmacy Details & List
+  'pharma.title': 'Pharmacies',
   'pharma.detailsTitle': 'Pharmacy Details',
   'pharma.call': 'Call',
   'pharma.directions': 'Directions',

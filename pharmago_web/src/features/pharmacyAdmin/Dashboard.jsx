@@ -54,6 +54,10 @@ export default function PharmaDashboard() {
     loadLiveData();
   }, []);
 
+  const todayOrders = orders.length;
+  const enAttente = orders.filter((o) => o.status === "en_attente" || o.status === "pending").length;
+  const stockFaible = drugs.filter((d) => d.status === "stock_faible" || d.quantity <= 10).length;
+
   return (
     <div>
       <PageHeader title={t("pharmaDash.title")} subtitle={t("pharmaDash.subtitle")} />

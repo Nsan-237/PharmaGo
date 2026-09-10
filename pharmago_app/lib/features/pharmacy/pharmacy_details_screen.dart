@@ -5,7 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/mock_data/mock_data.dart';
-import '../../core/widgets/map_preview_card.dart';
+import '../../core/widgets/adaptive_map_view.dart';
+import '../../core/widgets/app_toast.dart';
 
 class PharmacyDetailsScreen extends ConsumerWidget {
   const PharmacyDetailsScreen({super.key});
@@ -114,17 +115,245 @@ class PharmacyDetailsScreen extends ConsumerWidget {
                       _PharmaActionButton(
                         icon: Icons.phone_outlined,
                         label: context.tr('pharma.call', ref: ref),
-                        onTap: () {},
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              title: Row(
+                                children: [
+                                  const Icon(Icons.phone_in_talk_rounded, color: AppColors.primary),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isFr ? 'Appeler la pharmacie' : 'Call Pharmacy',
+                                    style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              content: Text(
+                                '${pharmacy.name}\n${pharmacy.phone}',
+                                style: GoogleFonts.inter(fontSize: 14, height: 1.5),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: Text(isFr ? 'Fermer' : 'Close'),
+                                ),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    AppToast.show(
+                                      context,
+                                      message: isFr
+                                          ? 'Numérotation de ${pharmacy.phone}...'
+                                          : 'Dialing ${pharmacy.phone}...',
+                                      type: ToastType.info,
+                                    );
+                                  },
+                                  icon: const Icon(Icons.call, color: Colors.white, size: 16),
+                                  label: Text(
+                                    isFr ? 'Composer' : 'Dial',
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                       _PharmaActionButton(
                         icon: Icons.directions_outlined,
                         label: context.tr('pharma.directions', ref: ref),
-                        onTap: () {},
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            isScrollControlled: true,
+                            builder: (bCtx) => Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Center(
+                                    child: Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryLight,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(Icons.navigation_rounded, color: AppColors.primary, size: 24),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              pharmacy.name,
+                                              style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                            ),
+                                            Text(
+                                              '${pharmacy.address} • ${pharmacy.city}',
+                                              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 18),
+                                  // Time and distance estimation pill row
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF0FDF4),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: const Color(0xFFBBF7D0)),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              const Icon(Icons.directions_car_rounded, color: AppColors.primary, size: 20),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '~${(pharmacy.distanceKm * 3.5).round()} min',
+                                                style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                                              ),
+                                              Text(isFr ? 'En voiture' : 'By car', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEFF6FF),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              const Icon(Icons.directions_walk_rounded, color: Color(0xFF2563EB), size: 20),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '~${(pharmacy.distanceKm * 12).round()} min',
+                                                style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF1E40AF)),
+                                              ),
+                                              Text(isFr ? 'À pied' : 'Walking', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFEF3C7),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: const Color(0xFFFDE68A)),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              const Icon(Icons.straighten_rounded, color: Color(0xFFD97706), size: 20),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '${pharmacy.distanceKm} km',
+                                                style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF92400E)),
+                                              ),
+                                              Text(isFr ? 'Distance' : 'Distance', style: GoogleFonts.inter(fontSize: 10, color: AppColors.textMuted)),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    isFr ? 'Étapes de l\'itinéraire :' : 'Route steps:',
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildRouteStep(
+                                    '1',
+                                    isFr ? 'Partir de votre position actuelle' : 'Start from your current location',
+                                    isFr ? 'Suivre l\'axe principal vers ${pharmacy.city}' : 'Follow main axis toward ${pharmacy.city}',
+                                  ),
+                                  _buildRouteStep(
+                                    '2',
+                                    isFr ? 'Rejoindre ${pharmacy.address}' : 'Head towards ${pharmacy.address}',
+                                    '${pharmacy.distanceKm} km',
+                                  ),
+                                  _buildRouteStep(
+                                    '3',
+                                    isFr ? 'Destination atteinte à droite : ${pharmacy.name}' : 'Destination reached on right: ${pharmacy.name}',
+                                    pharmacy.openingHours,
+                                    isLast: true,
+                                  ),
+                                  const SizedBox(height: 18),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 48,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.pop(bCtx);
+                                        AppToast.show(
+                                          context,
+                                          message: isFr
+                                              ? 'Navigation GPS activée vers ${pharmacy.name}'
+                                              : 'GPS navigation active towards ${pharmacy.name}',
+                                          type: ToastType.success,
+                                        );
+                                      },
+                                      icon: const Icon(Icons.explore_rounded, color: Colors.white, size: 20),
+                                      label: Text(
+                                        isFr ? 'Démarrer la navigation GPS' : 'Start GPS Navigation',
+                                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       _PharmaActionButton(
                         icon: Icons.language_rounded,
                         label: context.tr('pharma.website', ref: ref),
-                        onTap: () {},
+                        onTap: () {
+                          AppToast.show(
+                            context,
+                            message: '${pharmacy.website}',
+                            type: ToastType.info,
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -145,39 +374,62 @@ class PharmacyDetailsScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE0F2FE),
-                      borderRadius: BorderRadius.circular(12),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFE0F2FE), Color(0xFFBAE6FD)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF7DD3FC)),
                     ),
-                    child: const Icon(Icons.medication_rounded, color: Color(0xFF0284C7), size: 26),
+                    child: const Center(
+                      child: Icon(Icons.vaccines_rounded, color: Color(0xFF0284C7), size: 30),
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          drug.name,
-                          style: GoogleFonts.sora(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              drug.name,
+                              style: GoogleFonts.sora(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                drug.dosage,
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF2563EB)),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           isFr
-                              ? 'En Stock - ${drug.stockCount} unités'
-                              : 'In Stock - ${drug.stockCount} units',
+                              ? 'En Stock - ${drug.stockCount} boîtes disponibles'
+                              : 'In Stock - ${drug.stockCount} boxes available',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.success,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           isFr ? 'Prix : 1 200 FCFA' : 'Price: 1,200 FCFA',
                           style: GoogleFonts.inter(
@@ -195,7 +447,7 @@ class PharmacyDetailsScreen extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
-            // ── 3. Route & ETA Section ──
+            // ── 3. Route & ETA Section with Real OpenStreetMap ──
             Text(
               context.tr('pharma.routeAndEta', ref: ref),
               style: GoogleFonts.sora(
@@ -205,9 +457,10 @@ class PharmacyDetailsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 10),
-            const MapPreviewCard(
-              height: 160,
+            AdaptiveMapView(
+              height: 175,
               showRoute: true,
+              title: pharmacy.name,
               etaText: '25 - 35 min (8.2 km)',
             ),
           ],
@@ -285,4 +538,55 @@ class _PharmaActionButton extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _buildRouteStep(String stepNumber, String title, String subtitle, {bool isLast = false}) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Column(
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: isLast ? AppColors.success : AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                stepNumber,
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          if (!isLast)
+            Container(
+              width: 2,
+              height: 26,
+              color: Colors.grey.shade300,
+            ),
+        ],
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Padding(
+          padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+              ),
+              Text(
+                subtitle,
+                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
 }

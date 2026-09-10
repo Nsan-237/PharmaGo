@@ -97,30 +97,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Animated Hero Card Graphic
-                        Container(
-                          width: 140,
-                          height: 140,
-                          decoration: BoxDecoration(
-                            color: slide.iconBg,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: slide.iconColor.withValues(alpha: 0.15),
-                                blurRadius: 30,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Icon(
-                              slide.icon,
-                              size: 64,
-                              color: slide.iconColor,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 48),
+                        // Rich Realistic Illustration Graphic Card
+                        _buildSlideIllustration(index, slide, isFr),
+                        const SizedBox(height: 36),
 
                         // Title
                         Text(
@@ -238,6 +217,115 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ],
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSlideIllustration(int index, _OnboardingData slide, bool isFr) {
+    final String imagePath;
+    final String badgeText;
+    final IconData badgeIcon;
+    final Color badgeColor;
+
+    if (index == 0) {
+      imagePath = 'assets/images/onboarding_find_pharmacy.jpg';
+      badgeText = isFr ? 'Pharmacies à proximité' : 'Nearby Pharmacies';
+      badgeIcon = Icons.location_on_rounded;
+      badgeColor = AppColors.primary;
+    } else if (index == 1) {
+      imagePath = 'assets/images/onboarding_order_medicine.jpg';
+      badgeText = isFr ? 'Stock & Ordonnances' : 'Verified Stock & Rx';
+      badgeIcon = Icons.verified_rounded;
+      badgeColor = const Color(0xFF2563EB);
+    } else {
+      imagePath = 'assets/images/onboarding_fast_delivery.jpg';
+      badgeText = isFr ? 'Livraison Express ~30 min' : 'Express Delivery ~30 min';
+      badgeIcon = Icons.flash_on_rounded;
+      badgeColor = const Color(0xFFD97706);
+    }
+
+    return Container(
+      width: 290,
+      height: 215,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.14),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              imagePath,
+              fit: BoxFit.cover,
+            ),
+            // Bottom gradient overlay to make badge pop
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 70,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.45),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Floating badge over image
+            Positioned(
+              bottom: 12,
+              left: 14,
+              right: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.94),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(badgeIcon, color: badgeColor, size: 16),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        badgeText,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

@@ -51,6 +51,7 @@ app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/payment", paymentRoutes);
 app.use("/api/tracking", trackingRoutes);
 
 // 404 Handler

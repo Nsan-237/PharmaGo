@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 import 'home_screen.dart';
@@ -34,6 +36,55 @@ class _BottomNavShellState extends ConsumerState<BottomNavShell> {
         index: _currentIndex,
         children: _screens,
       ),
+      floatingActionButton: Container(
+        height: 52,
+        margin: const EdgeInsets.only(bottom: 8),
+        child: FloatingActionButton.extended(
+          heroTag: 'pharmAiChatbotFab',
+          onPressed: () => context.push('/symptom-checker'),
+          backgroundColor: AppColors.primary,
+          elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: const BorderSide(color: Colors.white, width: 1.5),
+          ),
+          icon: Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.25),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              color: Colors.white,
+              size: 19,
+            ),
+          ),
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'PharmAI',
+                style: GoogleFonts.sora(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                width: 7,
+                height: 7,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4ADE80), // Online green dot
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,

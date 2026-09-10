@@ -74,80 +74,108 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Location selector
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                      // Official Brand Logo + Name (Well seen)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.border),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.location_on_rounded,
-                                size: 16, color: AppColors.primary),
-                            const SizedBox(width: 6),
-                            Text(
-                              context.tr('home.location', ref: ref),
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textDark,
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              height: 38,
+                              width: 38,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Pharma Finder Go',
+                                style: GoogleFonts.sora(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryDark,
+                                  letterSpacing: -0.2,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.keyboard_arrow_down_rounded,
-                                size: 16, color: AppColors.textMuted),
-                          ],
-                        ),
+                              Text(
+                                isFr ? 'Cameroun • 24h/24' : 'Cameroon • 24/7',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
 
-                      // Lang Toggle + Brand Icon
+                      // Location pill + Language Switcher
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.location_on_rounded,
+                                    size: 14, color: AppColors.primary),
+                                const SizedBox(width: 3),
+                                Text(
+                                  context.tr('home.location', ref: ref),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
                           ActionChip(
                             avatar: Text(isFr ? '🇫🇷' : '🇬🇧',
-                                style: const TextStyle(fontSize: 12)),
+                                style: const TextStyle(fontSize: 11)),
                             label: Text(
                               isFr ? 'FR' : 'EN',
                               style: GoogleFonts.inter(
-                                fontSize: 11,
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primary,
                               ),
                             ),
                             backgroundColor: Colors.white,
                             side: const BorderSide(color: AppColors.border),
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            visualDensity: VisualDensity.compact,
                             onPressed: () {
                               ref
                                   .read(localeProvider.notifier)
                                   .toggleLanguage();
                             },
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: AppColors.primary
-                                      .withValues(alpha: 0.3)),
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.local_pharmacy_rounded,
-                                  color: AppColors.primary, size: 18),
-                            ),
                           ),
                         ],
                       ),
@@ -385,6 +413,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
               const SizedBox(height: 24),
 
+              // ── 5b. Popular Medicines Section with Real Images ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isFr ? 'Médicaments populaires' : 'Popular Medicines',
+                      style: GoogleFonts.sora(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => context.go('/search-results'),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        context.tr('home.seeAll', ref: ref),
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Horizontal Medicines List with Real Images
+              SizedBox(
+                height: 190,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: mockPopularDrugs.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 14),
+                  itemBuilder: (context, index) {
+                    final drug = mockPopularDrugs[index];
+                    return _PopularDrugCard(drug: drug, isFr: isFr);
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
               // ── 6. Nearby Pharmacies Section Header ──
               FadeTransition(
                 opacity: _staggeredFade(5),
@@ -455,7 +536,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               const EdgeInsets.symmetric(horizontal: 20),
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: mockPharmacies.take(3).length,
+                          itemCount: mockPharmacies.take(5).length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 12),
                           itemBuilder: (context, index) {
@@ -572,119 +653,311 @@ class _PharmacyCardHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Pharmacy Icon Box
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(Icons.storefront_rounded,
-                color: AppColors.primary, size: 26),
-          ),
-          const SizedBox(width: 14),
+    // Generate distinct color and icon based on pharmacy name
+    final isYaounde = pharmacy.city == 'Yaoundé';
+    final isDonBosco = pharmacy.name.contains('Don Bosco');
 
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  pharmacy.name,
-                  style: GoogleFonts.sora(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
+    return InkWell(
+      onTap: () => context.go('/pharmacy-details'),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDonBosco ? AppColors.primary.withValues(alpha: 0.3) : AppColors.border,
+            width: isDonBosco ? 1.5 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isDonBosco
+                  ? AppColors.primary.withValues(alpha: 0.08)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Distinctive Pharmacy Brand Badge / Avatar
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDonBosco
+                      ? [const Color(0xFF0F766E), const Color(0xFF0D9488)]
+                      : isYaounde
+                          ? [const Color(0xFF1E40AF), const Color(0xFF3B82F6)]
+                          : [const Color(0xFF047857), const Color(0xFF10B981)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    Text(
-                      '${pharmacy.distanceKm} km',
-                      style: GoogleFonts.inter(
-                          fontSize: 12, color: AppColors.textBody),
-                    ),
-                    const SizedBox(width: 6),
-                    // Open/closed badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: pharmacy.isOpen
-                            ? const Color(0xFFDCFCE7)
-                            : const Color(0xFFFEE2E2),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        pharmacy.isOpen
-                            ? (isFr ? 'Ouvert' : 'Open')
-                            : (isFr ? 'Fermé' : 'Closed'),
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: pharmacy.isOpen
-                              ? AppColors.primary
-                              : AppColors.error,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isDonBosco ? const Color(0xFF0F766E) : (isYaounde ? const Color(0xFF1E40AF) : const Color(0xFF047857)))
+                        .withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Icon(Icons.local_pharmacy_rounded, color: Colors.white, size: 28),
+                  if (pharmacy.isOnDuty)
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFBBF24),
+                          shape: BoxShape.circle,
                         ),
                       ),
                     ),
-                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          pharmacy.name,
+                          style: GoogleFonts.sora(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // City Tag Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isYaounde ? const Color(0xFFEFF6FF) : const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isYaounde ? const Color(0xFF93C5FD) : const Color(0xFF86EFAC),
+                          ),
+                        ),
+                        child: Text(
+                          pharmacy.city,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isYaounde ? const Color(0xFF1D4ED8) : const Color(0xFF15803D),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    pharmacy.address,
+                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      // Rating
+                      const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF59E0B)),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${pharmacy.rating}',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '• ${pharmacy.distanceKm} km',
+                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textBody),
+                      ),
+                      const SizedBox(width: 6),
+                      // Open/closed badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: pharmacy.isOpen ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          pharmacy.isOpen
+                              ? (isFr ? 'Ouvert' : 'Open')
+                              : (isFr ? 'Fermé' : 'Closed'),
+                          style: GoogleFonts.inter(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: pharmacy.isOpen ? AppColors.primary : AppColors.error,
+                          ),
+                        ),
+                      ),
+                      if (pharmacy.isOnDuty) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            isFr ? 'De garde' : 'On duty',
+                            style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Arrow button to view pharmacy details
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Popular Drug Card — Rich Product Image + Price + Direct Order Action
+// ─────────────────────────────────────────────────────────────────────────────
+class _PopularDrugCard extends StatelessWidget {
+  final DrugModel drug;
+  final bool isFr;
+
+  const _PopularDrugCard({required this.drug, required this.isFr});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.go('/request-order'),
+      child: Container(
+        width: 145,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Medicine Product Image Container
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: 82,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
-                const SizedBox(height: 2),
+                child: drug.imageUrl.isNotEmpty
+                    ? Image.network(
+                        drug.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.medication_rounded,
+                              color: AppColors.primary, size: 36),
+                        ),
+                      )
+                    : const Center(
+                        child: Icon(Icons.medication_rounded,
+                            color: AppColors.primary, size: 36),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Drug Name
+            Text(
+              drug.name,
+              style: GoogleFonts.sora(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+
+            // Category
+            Text(
+              drug.category,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: AppColors.textMuted,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            const Spacer(),
+
+            // Price + Add Button Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 Text(
-                  pharmacy.openingHours,
+                  '${drug.price} F',
                   style: GoogleFonts.inter(
-                      fontSize: 11, color: AppColors.textMuted),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(Icons.add_shopping_cart_rounded,
+                      size: 14, color: AppColors.primary),
                 ),
               ],
             ),
-          ),
-
-          // Request Button
-          ElevatedButton(
-            onPressed: () => context.go('/pharmacy-details'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              elevation: 0,
-            ),
-            child: Text(
-              isFr ? 'Demander' : 'Request',
-              style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

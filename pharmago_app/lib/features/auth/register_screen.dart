@@ -17,13 +17,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       TextEditingController(text: 'Marie Ngono');
   final TextEditingController _emailController =
       TextEditingController(text: 'marie.ngono@gmail.com');
-  String _selectedCity = 'Douala';
+  final TextEditingController _phoneController =
+      TextEditingController(text: '677 34 21 09');
+  final TextEditingController _addressController =
+      TextEditingController(text: 'Mimboman, Carrefour Don Bosco');
+  String _selectedCity = 'Yaoundé';
   bool _termsAccepted = true;
   bool _isLoading = false;
 
   final List<String> _cities = [
-    'Douala',
     'Yaoundé',
+    'Douala',
     'Bafoussam',
     'Limbe',
     'Bamenda',
@@ -35,6 +39,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
@@ -195,6 +201,48 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             if (val != null) setState(() => _selectedCity = val);
                           },
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Phone Number (+237)
+                    Text(
+                      ref.read(localeProvider) == AppLanguage.fr ? 'Numéro de téléphone (+237)' : 'Phone Number (+237)',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        hintText: '6XX XX XX XX',
+                        prefixIcon: Container(
+                          padding: const EdgeInsets.all(12),
+                          child: const Text('🇨🇲', style: TextStyle(fontSize: 16)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Delivery Address / Quartier
+                    Text(
+                      ref.read(localeProvider) == AppLanguage.fr ? 'Adresse de livraison (Quartier / Repère)' : 'Delivery Address (Neighborhood)',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _addressController,
+                      decoration: InputDecoration(
+                        hintText: ref.read(localeProvider) == AppLanguage.fr ? 'Ex: Mimboman, Carrefour Don Bosco' : 'e.g., Mimboman, Don Bosco Junction',
+                        prefixIcon: const Icon(Icons.home_outlined),
                       ),
                     ),
                     const SizedBox(height: 20),

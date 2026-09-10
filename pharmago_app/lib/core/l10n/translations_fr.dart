@@ -4,6 +4,8 @@ const Map<String, String> translationsFr = {
   'app.tagline': 'Trouvez. Commandez. Livrez.',
   'onboarding.findTitle': 'Trouvez les Pharmacies Proches',
   'onboarding.findDesc': 'Recherchez vos médicaments et localisez les pharmacies proches au Cameroun.',
+  'onboarding.orderTitle': 'Commandez vos Médicaments',
+  'onboarding.orderDesc': 'Demandez vos médicaments ou téléversez votre ordonnance en toute simplicité.',
   'onboarding.stockTitle': 'Confirmation Réelle du Stock',
   'onboarding.stockDesc': 'Le pharmacien confirme la disponibilité réelle avant finalisation.',
   'onboarding.deliverTitle': 'Livraison Rapide',
@@ -62,7 +64,8 @@ const Map<String, String> translationsFr = {
   'search.resultsTitle': 'Résultats de Recherche',
   'search.pharmaciesFound': 'pharmacies trouvées',
 
-  // Pharmacy Details
+  // Pharmacy Details & List
+  'pharma.title': 'Pharmacies',
   'pharma.detailsTitle': 'Détails de la Pharmacie',
   'pharma.call': 'Appeler',
   'pharma.directions': 'Itinéraire',
