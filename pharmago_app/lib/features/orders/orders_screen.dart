@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/mock_data/mock_data.dart';
+import '../../core/providers/orders_provider.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
@@ -32,6 +33,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
     final isFr = lang == AppLanguage.fr;
+    final ordersList = ref.watch(ordersProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -66,20 +68,20 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
         controller: _tabController,
         children: [
           // All
-          _buildOrdersList(mockClientOrders, isFr),
+          _buildOrdersList(ordersList, isFr),
           // Ongoing
           _buildOrdersList(
-            mockClientOrders.where((o) => o.status == 'in_progress' || o.status == 'en_attente').toList(),
+            ordersList.where((o) => o.status == 'in_progress' || o.status == 'en_attente').toList(),
             isFr,
           ),
           // Completed
           _buildOrdersList(
-            mockClientOrders.where((o) => o.status == 'completed' || o.status == 'livree').toList(),
+            ordersList.where((o) => o.status == 'completed' || o.status == 'livree').toList(),
             isFr,
           ),
           // Cancelled
           _buildOrdersList(
-            mockClientOrders.where((o) => o.status == 'cancelled').toList(),
+            ordersList.where((o) => o.status == 'cancelled').toList(),
             isFr,
           ),
         ],

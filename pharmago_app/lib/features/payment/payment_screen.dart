@@ -6,6 +6,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../core/services/campay_service.dart';
+import 'package:intl/intl.dart';
+import '../../core/mock_data/mock_data.dart';
+import '../../core/providers/orders_provider.dart';
 
 class PaymentScreen extends ConsumerStatefulWidget {
   const PaymentScreen({super.key});
@@ -33,6 +36,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final isFr = lang == AppLanguage.fr;
 
     if (_selectedMethod == 'cash') {
+      _addOrderToState();
       AppToast.show(
         context,
         message: isFr
@@ -59,6 +63,25 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     _showCampayUssdDialog(isFr);
   }
 
+  void _addOrderToState() {
+    final now = DateTime.now();
+    final formattedDate = DateFormat('dd MMM yyyy, h:mm a').format(now);
+    
+    final newOrder = ClientOrderModel(
+      id: '#PGO-${now.millisecondsSinceEpoch.toString().substring(9)}',
+      pharmacyName: 'Pharmacie du Centre',
+      address: 'Bastos, Yaoundé',
+      drugs: ['Amoxicillin 500mg (x1)'],
+      total: 2200,
+      status: 'en_attente',
+      createdAt: formattedDate,
+      estimatedTime: '25 - 35 min',
+      isDelivery: true,
+    );
+    
+    ref.read(ordersProvider.notifier).addOrder(newOrder);
+  }
+
   void _showCampayUssdDialog(bool isFr) {
     final isMtn = _selectedMethod == 'momo';
     final operatorName = isMtn ? 'MTN Mobile Money' : 'Orange Money';
@@ -80,6 +103,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         isFr: isFr,
         onSuccess: () {
           Navigator.of(ctx).pop();
+          _addOrderToState();
           AppToast.show(
             context,
             message: isFr

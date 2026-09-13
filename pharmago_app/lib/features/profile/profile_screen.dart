@@ -95,13 +95,13 @@ class ProfileScreen extends ConsumerWidget {
                   _ProfileMenuItem(
                     icon: Icons.person_outline_rounded,
                     title: context.tr('profile.personalInfo', ref: ref),
-                    onTap: () {},
+                    onTap: () => context.go('/profile/personal-info'),
                   ),
                   const Divider(height: 1, color: AppColors.divider),
                   _ProfileMenuItem(
                     icon: Icons.location_on_outlined,
                     title: context.tr('profile.addresses', ref: ref),
-                    onTap: () {},
+                    onTap: () => context.go('/profile/addresses'),
                   ),
                   const Divider(height: 1, color: AppColors.divider),
                   _ProfileMenuItem(
@@ -140,7 +140,7 @@ class ProfileScreen extends ConsumerWidget {
                   _ProfileMenuItem(
                     icon: Icons.help_outline_rounded,
                     title: context.tr('profile.helpSupport', ref: ref),
-                    onTap: () {},
+                    onTap: () => context.go('/profile/help-support'),
                   ),
                 ],
               ),

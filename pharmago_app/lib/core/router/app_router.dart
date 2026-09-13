@@ -17,6 +17,9 @@ import '../../features/symptoms/symptom_checker_screen.dart';
 import '../../features/health_tips/health_tips_screen.dart';
 import '../../features/orders/orders_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/profile/personal_info_screen.dart';
+import '../../features/profile/addresses_screen.dart';
+import '../../features/profile/help_support_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
@@ -95,6 +98,18 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/profile/personal-info',
+      builder: (context, state) => const PersonalInfoScreen(),
+    ),
+    GoRoute(
+      path: '/profile/addresses',
+      builder: (context, state) => const AddressesScreen(),
+    ),
+    GoRoute(
+      path: '/profile/help-support',
+      builder: (context, state) => const HelpSupportScreen(),
     ),
   ],
 );
