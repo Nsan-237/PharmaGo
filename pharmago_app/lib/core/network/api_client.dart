@@ -1,7 +1,13 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://10.0.2.2:5000/api'; // Android Emulator default host PC loopback or localhost
+  // Web / Device Preview → localhost
+  // Android Emulator     → 10.0.2.2 (maps to host PC)
+  // Real Android Device  → replace with your PC's local IP e.g. 192.168.x.x
+  static String get baseUrl =>
+      kIsWeb ? 'http://localhost:5000/api' : 'http://10.0.2.2:5000/api';
+
   late final Dio _dio;
 
   ApiClient({String? authToken}) {

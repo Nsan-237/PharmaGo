@@ -5,8 +5,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -208,3 +209,31 @@ model DeliveryLog {
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   agent User  @relation(fields: [agentId], references: [id], onDelete: Cascade)
 }
+
+// ─── Security & Audit Models ───────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?  // null if done directly in DB
+  userEmail  String?
+  userRole   String?
+  action     String   // e.g. "UPDATE_PRODUCT_PRICE", "DELETE_ORDER", "DIRECT_DB_CHANGE"
+  tableName  String   // e.g. "Product", "Order", "Payment"
+  recordId   String?  // ID of the affected row
+  oldValue   String?  // JSON string of old data
+  newValue   String?  // JSON string of new data
+  ipAddress  String?
+  userAgent  String?
+  isSuspicious Boolean @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model LoginAttempt {
+  id         String   @id @default(uuid())
+  email      String
+  ipAddress  String?
+  success    Boolean
+  failReason String?
+  createdAt  DateTime @default(now())
+}
+

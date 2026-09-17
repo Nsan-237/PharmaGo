@@ -1,84 +1,59 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PharmaGo Pharmacy Routes
+// GET /api/pharmacies        - List all approved pharmacies
+// GET /api/pharmacies/:id    - Get single pharmacy with products
+// GET /api/pharmacies/:id/products - Get products for a pharmacy
+// ─────────────────────────────────────────────────────────────────────────────
+
 import express from "express";
 import prisma from "../db/prisma.js";
-import { authenticateToken, requireRoles } from "../middleware/auth.js";
+import { authenticateToken, requireRoles, auditLog } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Helper: Haversine distance in kilometers
-function getDistanceKm(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth radius in km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// Get all pharmacies or filter by city, search query, or GPS proximity
+// ── GET /api/pharmacies ───────────────────────────────────────────────────
+// Public: any client can see pharmacies
 router.get("/", async (req, res) => {
   try {
-    const { city, search, lat, lng, isGuard, limit = 20 } = req.query;
+    const { city, guard, search } = req.query;
 
     const where = { isApproved: true };
-    if (city) where.city = { contains: city };
-    if (isGuard === "true") where.isGuard247 = true;
+    if (city) where.city = city;
+    if (guard === "true") where.isGuard247 = true;
     if (search) {
       where.OR = [
-        { name: { contains: search } },
-        { address: { contains: search } },
-        { quarter: { contains: search } },
+        { name: { contains: search, mode: "insensitive" } },
+        { city: { contains: search, mode: "insensitive" } },
+        { quarter: { contains: search, mode: "insensitive" } },
       ];
     }
 
-    let pharmacies = await prisma.pharmacy.findMany({
+    const pharmacies = await prisma.pharmacy.findMany({
       where,
       include: {
-        _count: {
-          select: { products: true },
-        },
+        _count: { select: { products: true, orders: true } },
       },
-      take: parseInt(limit),
+      orderBy: { rating: "desc" },
     });
 
-    // If user provided latitude and longitude, calculate distance & sort by proximity
-    if (lat && lng) {
-      const userLat = parseFloat(lat);
-      const userLng = parseFloat(lng);
-
-      pharmacies = pharmacies
-        .map((p) => {
-          const distanceKm = getDistanceKm(userLat, userLng, p.latitude, p.longitude);
-          return {
-            ...p,
-            distanceKm: parseFloat(distanceKm.toFixed(2)),
-          };
-        })
-        .sort((a, b) => a.distanceKm - b.distanceKm);
-    }
-
-    res.json({ count: pharmacies.length, pharmacies });
+    res.json({ pharmacies, total: pharmacies.length });
   } catch (error) {
-    console.error("Fetch Pharmacies Error:", error);
-    res.status(500).json({ error: "Failed to fetch pharmacies" });
+    console.error("Pharmacies error:", error);
+    res.status(500).json({ error: "Failed to load pharmacies" });
   }
 });
 
-// Get Pharmacy Details & Inventory by ID or Slug
-router.get("/:idOrSlug", async (req, res) => {
+// ── GET /api/pharmacies/:id ───────────────────────────────────────────────
+router.get("/:id", async (req, res) => {
   try {
-    const { idOrSlug } = req.params;
-
-    const pharmacy = await prisma.pharmacy.findFirst({
-      where: {
-        OR: [{ id: idOrSlug }, { slug: idOrSlug }],
-      },
+    const pharmacy = await prisma.pharmacy.findUnique({
+      where: { id: req.params.id },
       include: {
-        products: true,
+        products: {
+          where: { stockQuantity: { gt: 0 } },
+          orderBy: { name: "asc" },
+        },
+        _count: { select: { orders: true } },
       },
     });
 
@@ -88,52 +63,63 @@ router.get("/:idOrSlug", async (req, res) => {
 
     res.json({ pharmacy });
   } catch (error) {
-    console.error("Pharmacy Detail Error:", error);
-    res.status(500).json({ error: "Failed to fetch pharmacy details" });
+    console.error("Pharmacy detail error:", error);
+    res.status(500).json({ error: "Failed to load pharmacy" });
   }
 });
 
-// Create new Pharmacy (Pending Approval)
-router.post("/", authenticateToken, async (req, res) => {
+// ── GET /api/pharmacies/:id/products ─────────────────────────────────────
+router.get("/:id/products", async (req, res) => {
   try {
-    const { name, address, city, quarter, latitude, longitude, phone, email, licenseNo, isGuard247 } = req.body;
+    const { category, search, inStock } = req.query;
 
-    if (!name || !address || !latitude || !longitude || !phone) {
-      return res.status(400).json({ error: "Name, address, phone, and GPS coordinates are required" });
+    const where = { pharmacyId: req.params.id };
+    if (category) where.category = category;
+    if (inStock === "true") where.stockQuantity = { gt: 0 };
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { category: { contains: search, mode: "insensitive" } },
+      ];
     }
 
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now();
-
-    const pharmacy = await prisma.pharmacy.create({
-      data: {
-        name,
-        slug,
-        address,
-        city: city || "Douala",
-        quarter,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-        phone,
-        email,
-        licenseNo,
-        isGuard247: isGuard247 === true || isGuard247 === "true",
-        isApproved: req.user.role === "PLATFORM_ADMIN", // Auto approve if superadmin created
-      },
+    const products = await prisma.product.findMany({
+      where,
+      orderBy: { name: "asc" },
     });
 
-    // Link user as pharmacy admin
-    await prisma.pharmacyStaff.create({
-      data: {
-        pharmacyId: pharmacy.id,
-        userId: req.user.id,
-        role: "PHARMACY_ADMIN",
-      },
-    });
-
-    res.status(201).json({ message: "Pharmacy created successfully", pharmacy });
+    res.json({ products, total: products.length });
   } catch (error) {
-    console.error("Create Pharmacy Error:", error);
-    res.status(500).json({ error: "Failed to create pharmacy" });
+    console.error("Products error:", error);
+    res.status(500).json({ error: "Failed to load products" });
+  }
+});
+
+// ── PUT /api/pharmacies/:id (Pharmacy Admin only) ─────────────────────────
+router.put("/:id", authenticateToken, requireRoles("PHARMACY_ADMIN", "PLATFORM_ADMIN"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { openingHours, isGuard247, phone, email } = req.body;
+
+    const old = await prisma.pharmacy.findUnique({ where: { id } });
+
+    const updated = await prisma.pharmacy.update({
+      where: { id },
+      data: { openingHours, isGuard247, phone, email },
+    });
+
+    await auditLog(req, {
+      action: "UPDATE_PHARMACY",
+      tableName: "Pharmacy",
+      recordId: id,
+      oldValue: old,
+      newValue: updated,
+    });
+
+    res.json({ pharmacy: updated });
+  } catch (error) {
+    console.error("Update pharmacy error:", error);
+    res.status(500).json({ error: "Failed to update pharmacy" });
   }
 });
 
