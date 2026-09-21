@@ -244,4 +244,49 @@ router.get("/me", authenticateToken, async (req, res) => {
   });
 });
 
+// ── PUT /api/auth/profile ─────────────────────────────────────────────────
+router.put("/profile", authenticateToken, async (req, res) => {
+  try {
+    const { fullName, phone } = req.body;
+
+    if (!fullName || fullName.trim().length === 0) {
+      return res.status(400).json({ error: "Full name is required" });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        fullName: fullName.trim(),
+        phone: phone !== undefined ? (phone ? phone.trim() : null) : undefined,
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        role: true,
+        avatarUrl: true,
+        createdAt: true,
+      },
+    });
+
+    await auditLog(req, {
+      action: "USER_PROFILE_UPDATED",
+      tableName: "User",
+      recordId: updatedUser.id,
+      newValue: { fullName: updatedUser.fullName, phone: updatedUser.phone },
+    });
+
+    console.log(`✅ Profile updated: ${updatedUser.email} (${updatedUser.fullName})`);
+
+    res.json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Update Profile Error:", error);
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
 export default router;

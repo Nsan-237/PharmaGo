@@ -6,6 +6,7 @@ import '../../core/l10n/app_localizations.dart';
 import '../../core/mock_data/mock_data.dart';
 import '../../core/providers/api_providers.dart';
 import '../../core/widgets/app_toast.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PharmacyListScreen extends ConsumerStatefulWidget {
   const PharmacyListScreen({super.key});
@@ -438,15 +439,21 @@ class _PharmacyCardDetailed extends StatelessWidget {
                               width: double.infinity,
                               height: 48,
                               child: ElevatedButton.icon(
-                                onPressed: () {
+                                onPressed: () async {
                                   Navigator.pop(bCtx);
-                                  AppToast.show(
-                                    context,
-                                    message: isFr
-                                        ? 'Navigation GPS activée vers ${pharma.name}'
-                                        : 'GPS navigation active towards ${pharma.name}',
-                                    type: ToastType.success,
-                                  );
+                                  final destination = Uri.encodeComponent('${pharma.name}, ${pharma.address}, ${pharma.city}, Cameroun');
+                                  final mapUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$destination');
+                                  if (await canLaunchUrl(mapUri)) {
+                                    await launchUrl(mapUri, mode: LaunchMode.externalApplication);
+                                  } else if (context.mounted) {
+                                    AppToast.show(
+                                      context,
+                                      message: isFr
+                                          ? 'Navigation GPS vers ${pharma.name}'
+                                          : 'GPS navigation towards ${pharma.name}',
+                                      type: ToastType.info,
+                                    );
+                                  }
                                 },
                                 icon: const Icon(Icons.explore_rounded, color: Colors.white, size: 20),
                                 label: Text(

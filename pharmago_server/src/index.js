@@ -13,6 +13,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import trackingRoutes from "./routes/trackingRoutes.js";
+import deliveryRoutes from "./routes/deliveryRoutes.js";
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/tracking", trackingRoutes);
+app.use("/api/agent", deliveryRoutes);
 
 // 404 Handler
 app.use((req, res) => {

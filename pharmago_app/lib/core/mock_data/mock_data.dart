@@ -28,6 +28,7 @@ class PharmacyModel {
   final int inStockUnits;
   final String deliveryTimeRange;
   final String website;
+  final String imageUrl;
 
   const PharmacyModel({
     required this.id,
@@ -44,7 +45,29 @@ class PharmacyModel {
     this.inStockUnits = 12,
     this.deliveryTimeRange = '25 - 35 min',
     this.website = 'www.pharmacieducentre.cm',
+    this.imageUrl = '',
   });
+
+  String get displayImageUrl {
+    if (imageUrl.isNotEmpty) return imageUrl;
+    final n = name.toLowerCase();
+    if (n.contains('centre')) {
+      return 'https://images.unsplash.com/photo-1586015554060-8db665966b0d?w=500&q=80';
+    } else if (n.contains('paix') || n.contains('peace')) {
+      return 'https://images.unsplash.com/photo-1576602976047-174e57a47881?w=500&q=80';
+    } else if (n.contains('johnson') || n.contains('mboppi')) {
+      return 'https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=500&q=80';
+    } else if (n.contains('bosco') || n.contains('don bosco')) {
+      return 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=500&q=80';
+    } else if (n.contains('côte') || n.contains('cote') || n.contains('bonanjo')) {
+      return 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&q=80';
+    } else if (n.contains('omnisports') || n.contains('mfoundi')) {
+      return 'https://images.unsplash.com/photo-1585435557343-3b092031a831?w=500&q=80';
+    } else if (city.toLowerCase().contains('yaound')) {
+      return 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=500&q=80';
+    }
+    return 'https://images.unsplash.com/photo-1586015554060-8db665966b0d?w=500&q=80';
+  }
 }
 
 class DrugModel {
@@ -385,7 +408,86 @@ const mockPopularDrugs = [
     dosage: '400mg • 10 comprimés',
     imageUrl: 'https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400&auto=format&fit=crop&q=80',
   ),
+  DrugModel(
+    id: 'd-7',
+    name: 'Métronidazole 500mg',
+    category: 'Antibiotique',
+    price: 950,
+    requiresRx: true,
+    inStock: true,
+    stockCount: 28,
+    dosage: '500mg • Boîte de 20 (Flagyl)',
+    imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&auto=format&fit=crop&q=80',
+  ),
+  DrugModel(
+    id: 'd-8',
+    name: 'Métronidazole 250mg',
+    category: 'Antibiotique',
+    price: 650,
+    requiresRx: true,
+    inStock: true,
+    stockCount: 15,
+    dosage: '250mg • Boîte de 20',
+    imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&auto=format&fit=crop&q=80',
+  ),
+  DrugModel(
+    id: 'd-9',
+    name: 'Paracétamol 1000mg',
+    category: 'Analgésique',
+    price: 750,
+    requiresRx: false,
+    inStock: true,
+    stockCount: 42,
+    dosage: '1000mg • Boîte de 8 effervescents',
+    imageUrl: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=400&auto=format&fit=crop&q=80',
+  ),
 ];
+
+/// Normalizes query and target strings by removing accents and non-alphanumeric chars
+/// Allows matching "paracetamol" or "metronidazole" against "Paracétamol 500mg" or "Métronidazole 250mg"
+String normalizeDrugSearch(String text) {
+  return text
+      .toLowerCase()
+      .replaceAll(RegExp(r'[éèêë]'), 'e')
+      .replaceAll(RegExp(r'[àâä]'), 'a')
+      .replaceAll(RegExp(r'[îï]'), 'i')
+      .replaceAll(RegExp(r'[ôö]'), 'o')
+      .replaceAll(RegExp(r'[ùûü]'), 'u')
+      .replaceAll(RegExp(r'[ç]'), 'c')
+      .replaceAll(RegExp(r'[^a-z0-9]'), '');
+}
+
+/// Checks if drug matches a search query regardless of dosage or accents
+bool drugMatchesQuery(DrugModel drug, String query) {
+  if (query.trim().isEmpty) return true;
+  final normQuery = normalizeDrugSearch(query);
+  final normName = normalizeDrugSearch(drug.name);
+  final normCategory = normalizeDrugSearch(drug.category);
+  final normDosage = normalizeDrugSearch(drug.dosage);
+
+  // Exact or substring match on normalized strings
+  if (normName.contains(normQuery) ||
+      normCategory.contains(normQuery) ||
+      normDosage.contains(normQuery)) {
+    return true;
+  }
+
+  // Token-level match (e.g. searching "paracetamol" or "metronidazole" matches tokens without dosage)
+  final tokens = query
+      .toLowerCase()
+      .replaceAll(RegExp(r'[éèêë]'), 'e')
+      .split(RegExp(r'\s+'))
+      .where((t) => t.isNotEmpty);
+  for (final token in tokens) {
+    final cleanToken = normalizeDrugSearch(token);
+    if (cleanToken.isNotEmpty &&
+        (normName.contains(cleanToken) || normCategory.contains(cleanToken))) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 const mockClientOrders = [
   ClientOrderModel(

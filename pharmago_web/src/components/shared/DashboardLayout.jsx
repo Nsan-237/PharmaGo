@@ -82,6 +82,20 @@ export default function DashboardLayout() {
     setLang(lang === "fr" ? "en" : "fr");
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("pharmago_token");
+    localStorage.removeItem("pharmago_user");
+    navigate("/login");
+  };
+
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("pharmago_user") || "{}");
+    } catch (_) {
+      return {};
+    }
+  })();
+
   return (
     <div className="flex h-screen overflow-hidden bg-bg">
       {/* Sidebar */}
@@ -145,7 +159,10 @@ export default function DashboardLayout() {
 
         {/* Logout */}
         <div className="p-3 border-t border-white/10">
-          <button className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 w-full transition-all">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 w-full transition-all cursor-pointer"
+          >
             <LogOut size={16} />
             {sidebarOpen && <span className="text-sm">{t("layout.logout")}</span>}
           </button>
@@ -217,10 +234,10 @@ export default function DashboardLayout() {
 
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold font-sora" style={{ background: "#0F9B8E" }}>
-              A
+              {user.fullName ? user.fullName.charAt(0).toUpperCase() : "A"}
             </div>
             <div className="hidden sm:block">
-              <p className="text-sm font-semibold leading-none font-sora" style={{ color: "#0D3B36" }}>Admin</p>
+              <p className="text-sm font-semibold leading-none font-sora" style={{ color: "#0D3B36" }}>{user.fullName || "Admin"}</p>
               <p className="text-xs text-gray-400">{t(`role.${role}`)}</p>
             </div>
           </div>

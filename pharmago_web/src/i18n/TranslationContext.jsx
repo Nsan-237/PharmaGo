@@ -33,3 +33,15 @@ export function useLang() {
   if (!ctx) throw new Error("useLang must be used inside <TranslationProvider>");
   return { lang: ctx.lang, setLang: ctx.setLang };
 }
+
+// Combined hook
+export function useTranslation() {
+  const ctx = useContext(TranslationContext);
+  if (!ctx) throw new Error("useTranslation must be used inside <TranslationProvider>");
+  return {
+    lang: ctx.lang,
+    setLang: ctx.setLang,
+    t: ctx.t,
+    toggleLanguage: () => ctx.setLang(ctx.lang === "fr" ? "en" : "fr"),
+  };
+}

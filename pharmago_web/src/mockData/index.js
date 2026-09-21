@@ -1,4 +1,4 @@
-﻿// src/mockData/index.js
+// src/mockData/index.js
 
 export const pharmacies = [
   { id: 1, name: "Pharmacie du Centre", address: "Rue de la Réunification, Douala", phone: "+237 233 42 15 80", status: "active", approved: true, orders: 124, revenue: 1450000, rating: 4.8, city: "Douala" },
@@ -30,6 +30,7 @@ export const orders = [
   { id: "CMD-2405", client: "Sophie Mendo", phone: "+237 655 33 91 77", drugs: [{ name: "Cotrimoxazole 960mg", qty: 1 }], total: 900, status: "rejete", type: "retrait", address: "", createdAt: "2026-08-26T11:45:00", hasPrescription: true },
   { id: "CMD-2406", client: "Alain Tchamba", phone: "+237 699 22 55 88", drugs: [{ name: "Amlodipine 5mg", qty: 1 }, { name: "Paracétamol 500mg", qty: 3 }], total: 3000, status: "en_attente", type: "livraison", address: "Logpom, Douala", createdAt: "2026-08-27T11:00:00", hasPrescription: false },
   { id: "CMD-2407", client: "Cécile Fouda", phone: "+237 677 65 44 31", drugs: [{ name: "Tramadol 100mg", qty: 1 }], total: 3500, status: "en_attente", type: "retrait", address: "", createdAt: "2026-08-27T11:20:00", hasPrescription: true },
+  { id: "CMD-2408", client: "Sam Samuel", phone: "+237 670 12 34 56", drugs: [{ name: "Paracétamol 500mg", qty: 2 }, { name: "Vitamine C 1000mg", qty: 1 }], total: 2500, status: "en_attente", type: "livraison", address: "Bastos, Yaoundé", createdAt: "2026-09-21T11:30:00", hasPrescription: false },
 ];
 
 export const users = [

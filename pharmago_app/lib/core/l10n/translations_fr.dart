@@ -44,7 +44,7 @@ const Map<String, String> translationsFr = {
 
   // Home Screen
   'home.location': 'Yaoundé, Cameroun',
-  'home.greeting': 'Bonjour, Sarah 👋',
+  'home.greeting': 'Bonjour 👋',
   'home.subtitle': 'Comment pouvons-nous vous aider ?',
   'home.searchHint': 'Rechercher un médicament, ex. Paracétamol',
   'home.actionSearchDrug': 'Médicaments',
@@ -125,7 +125,7 @@ const Map<String, String> translationsFr = {
   // AI Symptom Checker
   'symptom.title': 'Assistant Symptômes IA',
   'symptom.advisory': '(Conseil informatif)',
-  'symptom.greeting': 'Bonjour Sarah ! Je suis là pour vous aider à décrire vos symptômes.',
+  'symptom.greeting': 'Bonjour ! Je suis là pour vous aider à décrire vos symptômes.',
   'symptom.sampleUser': 'J\'ai des maux de tête et de la fièvre depuis 2 jours',
   'symptom.sampleAi': 'Merci pour ces précisions. Voici quelques causes possibles :\n• Rhume commun\n• Grippe saisonnière\n• Paludisme\n\nVeuillez vous reposer, boire beaucoup d\'eau et consulter un médecin si les symptômes persistent.',
   'symptom.disclaimer': 'Ceci n\'est pas un diagnostic médical. Veuillez consulter un vrai médecin.',
@@ -150,7 +150,7 @@ const Map<String, String> translationsFr = {
 
   // Profile Tab
   'profile.title': 'Profil',
-  'profile.name': 'Sarah Moukeng',
+  'profile.name': 'Mon Profil',
   'profile.phone': '+237 6 12 34 56 78',
   'profile.personalInfo': 'Informations Personnelles',
   'profile.addresses': 'Adresses de Livraison',

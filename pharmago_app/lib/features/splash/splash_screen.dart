@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
+import '../../core/providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -36,10 +38,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // Auto-navigate to onboarding after 2.2 seconds
-    Future.delayed(const Duration(milliseconds: 2200), () {
-      if (mounted) {
-        context.go('/onboarding');
+    // Auth-aware navigation after splash
+    Future.delayed(const Duration(milliseconds: 2200), () async {
+      if (!mounted) return;
+      final prefs = await SharedPreferences.getInstance();
+      final hasSeenOnboarding = prefs.getBool('onboarding_done') ?? false;
+      final authState = ref.read(authProvider);
+
+      if (authState.isAuthenticated) {
+        if (mounted) context.go('/home');
+      } else if (!hasSeenOnboarding) {
+        if (mounted) context.go('/onboarding');
+      } else {
+        if (mounted) context.go('/welcome');
       }
     });
   }

@@ -29,18 +29,46 @@ import PlatformOrders from "./features/platformAdmin/PlatformOrders";
 import PlatformDisputes from "./features/platformAdmin/Disputes";
 import PlatformReports from "./features/platformAdmin/Reports";
 
+// Auth
+import Login from "./features/auth/Login";
+
 const RoleContext = createContext();
 export const useRole = () => useContext(RoleContext);
 
+function getInitialRole() {
+  try {
+    const userStr = localStorage.getItem("pharmago_user");
+    if (userStr) {
+      const u = JSON.parse(userStr);
+      if (u.role === "PLATFORM_ADMIN") return "platform_admin";
+      if (u.role === "PHARMACY_ADMIN") return "pharmacy_admin";
+      if (u.role === "CASHIER") return "cashier";
+      if (u.role === "DELIVERY_AGENT") return "delivery_agent";
+    }
+  } catch (_) {}
+  return "pharmacy_admin";
+}
+
+function RootRedirect() {
+  const token = localStorage.getItem("pharmago_token");
+  const { role } = useRole();
+  if (!token) return <Navigate to="/login" replace />;
+  if (role === "platform_admin") return <Navigate to="/platform-admin/dashboard" replace />;
+  if (role === "cashier") return <Navigate to="/cashier/confirmation" replace />;
+  if (role === "delivery_agent") return <Navigate to="/agent/deliveries" replace />;
+  return <Navigate to="/pharmacy-admin/dashboard" replace />;
+}
+
 function App() {
-  const [role, setRole] = useState("pharmacy_admin");
+  const [role, setRole] = useState(getInitialRole);
 
   return (
     <TranslationProvider>
       <RoleContext.Provider value={{ role, setRole }}>
         <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/pharmacy-admin/dashboard" replace />} />
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="/login" element={<Login />} />
           
           {/* Pharmacy Admin */}
           <Route path="/pharmacy-admin" element={<DashboardLayout />}>

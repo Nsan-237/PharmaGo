@@ -122,3 +122,45 @@ export const apiUpdateDriverLocation = (orderId, lat, lng) =>
 
 export const apiGetDriverLocation = (orderId) => apiFetch(`/tracking/location/${orderId}`);
 
+// ── Admin Users CRUD ───────────────────────────────────────────────────────
+export const apiGetUsers = (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/admin/users?${query}`);
+};
+
+export const apiCreateUser = (userData) =>
+  apiFetch("/admin/users", {
+    method: "POST",
+    body: JSON.stringify(userData),
+  });
+
+export const apiUpdateUser = (id, userData) =>
+  apiFetch(`/admin/users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(userData),
+  });
+
+export const apiDeleteUser = (id) =>
+  apiFetch(`/admin/users/${id}`, {
+    method: "DELETE",
+  });
+
+// ── Admin Pharmacies CRUD ──────────────────────────────────────────────────
+export const apiCreatePharmacy = (pharmacyData) =>
+  apiFetch("/pharmacies", {
+    method: "POST",
+    body: JSON.stringify(pharmacyData),
+  });
+
+export const apiUpdatePharmacyFull = (id, pharmacyData) =>
+  apiFetch(`/pharmacies/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(pharmacyData),
+  });
+
+export const apiDeletePharmacy = (id) =>
+  apiFetch(`/pharmacies/${id}`, {
+    method: "DELETE",
+  });
+
+

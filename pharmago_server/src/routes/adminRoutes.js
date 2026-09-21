@@ -8,6 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import express from "express";
+import bcrypt from "bcryptjs";
 import prisma from "../db/prisma.js";
 import { authenticateToken, requireRoles, auditLog } from "../middleware/auth.js";
 
@@ -176,6 +177,149 @@ router.put("/users/:id/suspend", async (req, res) => {
   } catch (error) {
     console.error("Suspend user error:", error);
     res.status(500).json({ error: "Failed to update user" });
+  }
+});
+
+// ── POST /api/admin/users (Create User) ──────────────────────────────────
+router.post("/users", async (req, res) => {
+  try {
+    const { email, password, fullName, phone, role = "PATIENT", isApproved = true, pharmacyId } = req.body;
+
+    if (!email || !password || !fullName) {
+      return res.status(400).json({ error: "Email, password, and full name are required" });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+    if (existingUser) {
+      return res.status(400).json({ error: "Email already registered" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const validRoles = ["PATIENT", "PHARMACY_ADMIN", "CASHIER", "DELIVERY_AGENT", "PLATFORM_ADMIN"];
+    const assignedRole = validRoles.includes(role) ? role : "PATIENT";
+
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase().trim(),
+        passwordHash,
+        fullName: fullName.trim(),
+        phone: phone ? phone.trim() : null,
+        role: assignedRole,
+        isApproved: Boolean(isApproved),
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        role: true,
+        isApproved: true,
+        createdAt: true,
+      },
+    });
+
+    if (pharmacyId && (assignedRole === "PHARMACY_ADMIN" || assignedRole === "CASHIER")) {
+      await prisma.pharmacyStaff.create({
+        data: {
+          userId: user.id,
+          pharmacyId,
+          role: assignedRole,
+        },
+      });
+    }
+
+    await auditLog(req, {
+      action: "USER_CREATED_BY_ADMIN",
+      tableName: "User",
+      recordId: user.id,
+      newValue: { email: user.email, role: user.role, fullName: user.fullName },
+    });
+
+    res.status(201).json({ message: "User created successfully", user });
+  } catch (error) {
+    console.error("Create user error:", error);
+    res.status(500).json({ error: "Failed to create user" });
+  }
+});
+
+// ── PUT /api/admin/users/:id (Update User) ───────────────────────────────
+router.put("/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, phone, role, isApproved, password } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const data = {};
+    if (fullName !== undefined) data.fullName = fullName.trim();
+    if (phone !== undefined) data.phone = phone ? phone.trim() : null;
+    if (role !== undefined) {
+      const validRoles = ["PATIENT", "PHARMACY_ADMIN", "CASHIER", "DELIVERY_AGENT", "PLATFORM_ADMIN"];
+      if (validRoles.includes(role)) data.role = role;
+    }
+    if (isApproved !== undefined) data.isApproved = Boolean(isApproved);
+    if (password && password.trim().length >= 6) {
+      data.passwordHash = await bcrypt.hash(password.trim(), 10);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        role: true,
+        isApproved: true,
+        createdAt: true,
+      },
+    });
+
+    await auditLog(req, {
+      action: "USER_UPDATED_BY_ADMIN",
+      tableName: "User",
+      recordId: id,
+      oldValue: { role: user.role, isApproved: user.isApproved },
+      newValue: { role: updatedUser.role, isApproved: updatedUser.isApproved },
+    });
+
+    res.json({ message: "User updated successfully", user: updatedUser });
+  } catch (error) {
+    console.error("Update user error:", error);
+    res.status(500).json({ error: "Failed to update user" });
+  }
+});
+
+// ── DELETE /api/admin/users/:id (Delete User) ────────────────────────────
+router.delete("/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (id === req.user.id) {
+      return res.status(400).json({ error: "Cannot delete your own account" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    await prisma.pharmacyStaff.deleteMany({ where: { userId: id } });
+    await prisma.user.delete({ where: { id } });
+
+    await auditLog(req, {
+      action: "USER_DELETED_BY_ADMIN",
+      tableName: "User",
+      recordId: id,
+      oldValue: { email: user.email, fullName: user.fullName, role: user.role },
+    });
+
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    res.status(500).json({ error: "Failed to delete user" });
   }
 });
 

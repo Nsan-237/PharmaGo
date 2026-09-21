@@ -1,3 +1,15 @@
+<!-- Your newly registered account:
+
+Email: nsan@gmail.com
+Password: (the password you chose)
+Demo Patient:
+
+Email: patient@pharmago.cm
+Password: Patient@2026
+
+Delivery Agent:
+Email: agent@pharmago.cm (Martin Tamba)
+Password: Agent@2026 (Or driver@pharmago.cm / Driver@2026) -->
 # PharmaGo Cameroon — Project Architecture & Implementation Guide
 > **Version:** 1.0.0 (Production-Ready Architecture)  
 > **Ecosystem:** Mobile App (Flutter) • Web Portal (React/Vite) • Backend API (Node.js/Express) • Database (PostgreSQL/Supabase) • Payments (CamPay Mobile Money) • AI (Google Gemini 1.5 Flash)

@@ -77,8 +77,11 @@ export default function PharmaStock() {
       setDrugs(prev => prev.map(d => d.id === editDrug.id ? { ...d, ...form, quantity: qty, price: prc, status: getStatus(qty) } : d));
     } else {
       try {
+        const storedUser = JSON.parse(localStorage.getItem("pharmago_user") || "{}");
+        const pharmaId = storedUser?.pharmacy?.id || "pharmacie-centre-akwa";
+
         const res = await apiAddProduct({
-          pharmacyId: "pharmacie-centre-akwa",
+          pharmacyId: pharmaId,
           name: form.name,
           category: form.category || categories[0],
           stockQuantity: qty,

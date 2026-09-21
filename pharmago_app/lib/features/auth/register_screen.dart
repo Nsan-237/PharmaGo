@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/widgets/app_toast.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -13,17 +15,14 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Marie Ngono');
-  final TextEditingController _emailController =
-      TextEditingController(text: 'marie.ngono@gmail.com');
-  final TextEditingController _phoneController =
-      TextEditingController(text: '677 34 21 09');
-  final TextEditingController _addressController =
-      TextEditingController(text: 'Mimboman, Carrefour Don Bosco');
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   String _selectedCity = 'Yaoundé';
-  bool _termsAccepted = true;
-  bool _isLoading = false;
+  bool _termsAccepted = false;
+  bool _obscurePassword = true;
 
   final List<String> _cities = [
     'Yaoundé',
@@ -41,50 +40,65 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  void _handleCompleteRegistration() {
+  Future<void> _handleCompleteRegistration() async {
+    final isFr = ref.read(localeProvider) == AppLanguage.fr;
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ref.read(localeProvider) == AppLanguage.fr
-                ? 'Veuillez renseigner votre nom complet'
-                : 'Please enter your full name',
-          ),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      AppToast.show(context,
+          message: isFr ? 'Veuillez renseigner votre nom complet' : 'Please enter your full name',
+          type: ToastType.error);
       return;
     }
-
+    if (_emailController.text.trim().isEmpty) {
+      AppToast.show(context,
+          message: isFr ? 'Veuillez renseigner votre email' : 'Please enter your email',
+          type: ToastType.error);
+      return;
+    }
+    if (_passwordController.text.length < 6) {
+      AppToast.show(context,
+          message: isFr ? 'Mot de passe trop court (min 6 caractères)' : 'Password too short (min 6 characters)',
+          type: ToastType.error);
+      return;
+    }
     if (!_termsAccepted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ref.read(localeProvider) == AppLanguage.fr
-                ? 'Veuillez accepter les conditions d\'utilisation'
-                : 'Please accept the Terms of Service',
-          ),
-          backgroundColor: AppColors.warning,
-        ),
-      );
+      AppToast.show(context,
+          message: isFr ? 'Veuillez accepter les conditions' : 'Please accept the terms',
+          type: ToastType.error);
       return;
     }
 
-    setState(() => _isLoading = true);
+    final success = await ref.read(authProvider.notifier).register(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      fullName: _nameController.text.trim(),
+      phone: _phoneController.text.trim().isNotEmpty ? '+237${_phoneController.text.trim()}' : null,
+    );
 
-    Future.delayed(const Duration(milliseconds: 700), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        context.go('/home');
-      }
-    });
+    if (!mounted) return;
+
+    if (success) {
+      AppToast.show(context,
+          message: isFr
+              ? 'Bienvenue sur PharmaGo !'
+              : 'Welcome to PharmaGo!',
+          type: ToastType.success);
+      context.go('/home');
+    } else {
+      final error = ref.read(authProvider).error;
+      AppToast.show(context,
+          message: error ?? (isFr ? 'Erreur d\'inscription' : 'Registration failed'),
+          type: ToastType.error);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final isFr = ref.watch(localeProvider) == AppLanguage.fr;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -228,7 +242,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Delivery Address / Quartier
+                    // Password field
+                    Text(
+                      isFr ? 'Mot de passe' : 'Password',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        hintText: isFr ? 'Min. 6 caractères' : 'Min. 6 characters',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            color: AppColors.textMuted,
+                            size: 20,
+                          ),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     Text(
                       ref.read(localeProvider) == AppLanguage.fr ? 'Adresse de livraison (Quartier / Repère)' : 'Delivery Address (Neighborhood)',
                       style: GoogleFonts.inter(
@@ -283,12 +323,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleCompleteRegistration,
+                        onPressed: authState.isLoading ? null : _handleCompleteRegistration,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryDark,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        child: _isLoading
+                        child: authState.isLoading
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,

@@ -9,22 +9,49 @@ import '../../core/l10n/app_localizations.dart';
 import '../../core/widgets/app_toast.dart';
 
 class RequestOrderScreen extends ConsumerStatefulWidget {
-  const RequestOrderScreen({super.key});
+  final String? initialDrugName;
+  final int? initialPrice;
+  final String? initialDosage;
+  final String? initialImageUrl;
+  final bool? requiresPrescription;
+
+  const RequestOrderScreen({
+    super.key,
+    this.initialDrugName,
+    this.initialPrice,
+    this.initialDosage,
+    this.initialImageUrl,
+    this.requiresPrescription,
+  });
 
   @override
   ConsumerState<RequestOrderScreen> createState() => _RequestOrderScreenState();
 }
 
 class _RequestOrderScreenState extends ConsumerState<RequestOrderScreen> {
+  late String _drugName;
+  late int _unitPrice;
+  late String _dosage;
+  late String _imageUrl;
+  late bool _requiresPrescription;
+
   int _quantity = 1;
   Uint8List? _rxImageBytes;
   String? _rxImageName;
   String? _rxImageSize;
   final ImagePicker _picker = ImagePicker();
   String _deliveryOption = 'home'; // 'pickup' or 'home'
-
-  final int _unitPrice = 1200;
   final int _deliveryFee = 1000;
+
+  @override
+  void initState() {
+    super.initState();
+    _drugName = widget.initialDrugName ?? 'Paracétamol';
+    _unitPrice = widget.initialPrice ?? 500;
+    _dosage = widget.initialDosage ?? 'Boîte de 16 comprimés';
+    _imageUrl = widget.initialImageUrl ?? '';
+    _requiresPrescription = widget.requiresPrescription ?? false;
+  }
 
   int get _totalPrice {
     final subtotal = _unitPrice * _quantity;
@@ -165,7 +192,13 @@ class _RequestOrderScreenState extends ConsumerState<RequestOrderScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textDark, size: 20),
-          onPressed: () => context.go('/pharmacy-details'),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
         title: Text(
           context.tr('order.requestTitle', ref: ref),
@@ -184,17 +217,41 @@ class _RequestOrderScreenState extends ConsumerState<RequestOrderScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: _imageUrl.isNotEmpty
+                          ? Image.network(
+                              _imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.medication_rounded,
+                                color: AppColors.primary,
+                                size: 28,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.medication_rounded,
+                              color: AppColors.primary,
+                              size: 28,
+                            ),
                     ),
-                    child: const Icon(Icons.medication_liquid_rounded, color: AppColors.primary, size: 26),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -202,17 +259,40 @@ class _RequestOrderScreenState extends ConsumerState<RequestOrderScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Amoxicillin 500mg',
+                          _drugName,
                           style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textDark),
                         ),
-                        const SizedBox(height: 2),
+                        if (_dosage.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            _dosage,
+                            style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                          ),
+                        ],
+                        const SizedBox(height: 4),
                         Text(
-                          '1 200 FCFA',
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primaryDark),
+                          '${_formatPrice(_unitPrice)} FCFA',
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
                         ),
                       ],
                     ),
                   ),
+                  if (_requiresPrescription)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Rx',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFB45309),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

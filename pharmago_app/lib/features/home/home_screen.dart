@@ -7,6 +7,7 @@ import '../../core/l10n/app_localizations.dart';
 import '../../core/mock_data/mock_data.dart';
 import '../../core/widgets/adaptive_map_view.dart';
 import '../../core/widgets/skeleton_card.dart';
+import '../../core/providers/auth_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -57,6 +58,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
     final isFr = lang == AppLanguage.fr;
+    final auth = ref.watch(authProvider);
+    final displayName = auth.fullName.isNotEmpty && auth.fullName != 'User' && auth.fullName != 'Client'
+        ? auth.fullName
+        : (auth.firstName.isNotEmpty ? auth.firstName : '');
+    final greeting = displayName.isNotEmpty
+        ? (isFr ? 'Bonjour, $displayName 👋' : 'Hello, $displayName 👋')
+        : (isFr ? 'Bonjour 👋' : 'Hello 👋');
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -126,7 +134,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ],
                       ),
 
-                      // Location pill + Language Switcher
+                      // Location pill + Language Switcher + User Profile Avatar
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -177,6 +185,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   .toggleLanguage();
                             },
                           ),
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () => context.push('/profile'),
+                            child: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: AppColors.primary,
+                              child: Text(
+                                auth.initials,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -193,7 +217,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        context.tr('home.greeting', ref: ref),
+                        greeting,
                         style: GoogleFonts.sora(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -428,7 +452,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                     TextButton(
-                      onPressed: () => context.go('/search-results'),
+                      onPressed: () => context.push('/medicines'),
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: Size.zero,
@@ -523,10 +547,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 400),
                 child: _showSkeleton
-                    ? Padding(
-                        key: const ValueKey('skeleton'),
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: const SkeletonPharmacyList(count: 3),
+                    ? const Padding(
+                        key: ValueKey('skeleton'),
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: SkeletonPharmacyList(count: 3),
                       )
                     : FadeTransition(
                         key: const ValueKey('real'),
@@ -681,48 +705,73 @@ class _PharmacyCardHome extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Distinctive Pharmacy Brand Badge / Avatar
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: isDonBosco
-                      ? [const Color(0xFF0F766E), const Color(0xFF0D9488)]
-                      : isYaounde
-                          ? [const Color(0xFF1E40AF), const Color(0xFF3B82F6)]
-                          : [const Color(0xFF047857), const Color(0xFF10B981)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            // Distinctive Pharmacy Storefront Photo Card
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: 68,
+                height: 68,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: (isDonBosco ? const Color(0xFF0F766E) : (isYaounde ? const Color(0xFF1E40AF) : const Color(0xFF047857)))
-                        .withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.local_pharmacy_rounded, color: Colors.white, size: 28),
-                  if (pharmacy.isOnDuty)
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFBBF24),
-                          shape: BoxShape.circle,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      pharmacy.displayImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: isYaounde
+                                ? [const Color(0xFF1E40AF), const Color(0xFF3B82F6)]
+                                : [const Color(0xFF0F766E), const Color(0xFF0D9488)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.local_pharmacy_rounded, color: Colors.white, size: 30),
                         ),
                       ),
                     ),
-                ],
+                    if (pharmacy.isOnDuty)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.white, width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: const Text(
+                            '24h/24',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -858,7 +907,13 @@ class _PopularDrugCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.go('/request-order'),
+      onTap: () => context.push('/request-order', extra: {
+        'name': drug.name,
+        'price': drug.price,
+        'dosage': drug.dosage,
+        'imageUrl': drug.imageUrl,
+        'requiresPrescription': drug.requiresRx,
+      }),
       child: Container(
         width: 145,
         padding: const EdgeInsets.all(10),
@@ -883,8 +938,8 @@ class _PopularDrugCard extends StatelessWidget {
               child: Container(
                 height: 82,
                 width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
                     colors: [Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,

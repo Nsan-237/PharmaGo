@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
+import '../../core/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -12,6 +13,14 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lang = ref.watch(localeProvider);
     final isFr = lang == AppLanguage.fr;
+    final auth = ref.watch(authProvider);
+
+    final displayName = auth.isAuthenticated
+        ? (auth.fullName.isNotEmpty ? auth.fullName : 'Client')
+        : (isFr ? 'Client Invité' : 'Guest Client');
+    final displayContact = auth.phone.isNotEmpty
+        ? auth.phone
+        : (auth.email.isNotEmpty ? auth.email : (isFr ? 'Compte PharmaGo' : 'PharmaGo Account'));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -20,7 +29,13 @@ class ProfileScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textDark, size: 20),
-          onPressed: () => context.go('/home'),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
         title: Text(
           context.tr('profile.title', ref: ref),
@@ -42,10 +57,10 @@ class ProfileScreen extends ConsumerWidget {
                       color: AppColors.primaryDark,
                       shape: BoxShape.circle,
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Text(
-                        'SM',
-                        style: TextStyle(
+                        auth.initials,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
@@ -55,7 +70,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    context.tr('profile.name', ref: ref),
+                    displayName,
                     style: GoogleFonts.sora(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -64,7 +79,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    context.tr('profile.phone', ref: ref),
+                    displayContact,
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       color: AppColors.textMuted,
@@ -95,25 +110,25 @@ class ProfileScreen extends ConsumerWidget {
                   _ProfileMenuItem(
                     icon: Icons.person_outline_rounded,
                     title: context.tr('profile.personalInfo', ref: ref),
-                    onTap: () => context.go('/profile/personal-info'),
+                    onTap: () => context.push('/profile/personal-info'),
                   ),
                   const Divider(height: 1, color: AppColors.divider),
                   _ProfileMenuItem(
                     icon: Icons.location_on_outlined,
                     title: context.tr('profile.addresses', ref: ref),
-                    onTap: () => context.go('/profile/addresses'),
+                    onTap: () => context.push('/profile/addresses'),
                   ),
                   const Divider(height: 1, color: AppColors.divider),
                   _ProfileMenuItem(
                     icon: Icons.payment_rounded,
                     title: context.tr('profile.paymentMethods', ref: ref),
-                    onTap: () => context.go('/payment'),
+                    onTap: () => context.push('/payment'),
                   ),
                   const Divider(height: 1, color: AppColors.divider),
                   _ProfileMenuItem(
                     icon: Icons.description_outlined,
                     title: context.tr('profile.myPrescriptions', ref: ref),
-                    onTap: () => context.go('/request-order'),
+                    onTap: () => context.push('/request-order'),
                   ),
                   const Divider(height: 1, color: AppColors.divider),
                   // Settings + Language Switcher
@@ -140,7 +155,7 @@ class ProfileScreen extends ConsumerWidget {
                   _ProfileMenuItem(
                     icon: Icons.help_outline_rounded,
                     title: context.tr('profile.helpSupport', ref: ref),
-                    onTap: () => context.go('/profile/help-support'),
+                    onTap: () => context.push('/profile/help-support'),
                   ),
                 ],
               ),
@@ -151,7 +166,10 @@ class ProfileScreen extends ConsumerWidget {
             // ── 3. Logout Button ──
             Center(
               child: TextButton.icon(
-                onPressed: () => context.go('/welcome'),
+                onPressed: () async {
+                  await ref.read(authProvider.notifier).logout();
+                  if (context.mounted) context.go('/login');
+                },
                 icon: const Icon(Icons.power_settings_new_rounded, color: AppColors.error, size: 20),
                 label: Text(
                   context.tr('profile.logout', ref: ref),

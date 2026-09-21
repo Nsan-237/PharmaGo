@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 
@@ -162,7 +163,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     children: [
                       if (_currentPage < slides.length - 1) ...[
                         TextButton(
-                          onPressed: () => context.go('/welcome'),
+                          onPressed: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('onboarding_done', true);
+                            if (context.mounted) context.go('/welcome');
+                          },
                           child: Text(
                             context.tr('onboarding.skip', ref: ref),
                             style: GoogleFonts.inter(
@@ -195,7 +200,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ] else ...[
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => context.go('/welcome'),
+                            onPressed: () async {
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setBool('onboarding_done', true);
+                              if (context.mounted) context.go('/welcome');
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primaryDark,
                               padding: const EdgeInsets.symmetric(vertical: 16),

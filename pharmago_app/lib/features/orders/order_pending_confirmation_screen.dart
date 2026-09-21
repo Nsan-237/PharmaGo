@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
+import '../../core/providers/auth_provider.dart';
 
 enum MockConfirmationResult { pending, confirmed, rejected }
 
@@ -56,6 +57,10 @@ class _OrderPendingConfirmationScreenState
   Widget build(BuildContext context) {
     final lang = ref.watch(localeProvider);
     final isFr = lang == AppLanguage.fr;
+    final auth = ref.watch(authProvider);
+    final clientName = auth.isAuthenticated && auth.fullName.isNotEmpty ? auth.fullName : 'Client';
+    final clientPhone = auth.phone.isNotEmpty ? auth.phone : '+237 6xx xx xx xx';
+    final clientInitials = auth.initials;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -421,9 +426,9 @@ class _OrderPendingConfirmationScreenState
                       color: AppColors.primaryDark,
                       shape: BoxShape.circle,
                     ),
-                    child: const Center(
-                      child: Text('SM',
-                          style: TextStyle(
+                    child: Center(
+                      child: Text(clientInitials,
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 13)),
@@ -435,14 +440,14 @@ class _OrderPendingConfirmationScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Sarah Moukeng',
+                          clientName,
                           style: GoogleFonts.sora(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
                               color: AppColors.textDark),
                         ),
                         Text(
-                          '+237 6 12 34 56 78 • Bastos, Yaoundé',
+                          '$clientPhone • Bastos, Yaoundé',
                           style: GoogleFonts.inter(
                               fontSize: 11, color: AppColors.textMuted),
                         ),

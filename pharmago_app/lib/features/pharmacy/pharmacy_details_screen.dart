@@ -7,6 +7,7 @@ import '../../core/l10n/app_localizations.dart';
 import '../../core/mock_data/mock_data.dart';
 import '../../core/widgets/adaptive_map_view.dart';
 import '../../core/widgets/app_toast.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PharmacyDetailsScreen extends ConsumerWidget {
   const PharmacyDetailsScreen({super.key});
@@ -144,15 +145,21 @@ class PharmacyDetailsScreen extends ConsumerWidget {
                                     backgroundColor: AppColors.primary,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                   ),
-                                  onPressed: () {
+                                  onPressed: () async {
                                     Navigator.pop(ctx);
-                                    AppToast.show(
-                                      context,
-                                      message: isFr
-                                          ? 'Numérotation de ${pharmacy.phone}...'
-                                          : 'Dialing ${pharmacy.phone}...',
-                                      type: ToastType.info,
-                                    );
+                                    final cleanPhone = pharmacy.phone.replaceAll(RegExp(r'[^0-9+]'), '');
+                                    final uri = Uri.parse('tel:$cleanPhone');
+                                    if (await canLaunchUrl(uri)) {
+                                      await launchUrl(uri);
+                                    } else if (context.mounted) {
+                                      AppToast.show(
+                                        context,
+                                        message: isFr
+                                            ? 'Numérotation de ${pharmacy.phone}...'
+                                            : 'Dialing ${pharmacy.phone}...',
+                                        type: ToastType.info,
+                                      );
+                                    }
                                   },
                                   icon: const Icon(Icons.call, color: Colors.white, size: 16),
                                   label: Text(
@@ -317,15 +324,21 @@ class PharmacyDetailsScreen extends ConsumerWidget {
                                     width: double.infinity,
                                     height: 48,
                                     child: ElevatedButton.icon(
-                                      onPressed: () {
+                                      onPressed: () async {
                                         Navigator.pop(bCtx);
-                                        AppToast.show(
-                                          context,
-                                          message: isFr
-                                              ? 'Navigation GPS activée vers ${pharmacy.name}'
-                                              : 'GPS navigation active towards ${pharmacy.name}',
-                                          type: ToastType.success,
-                                        );
+                                        final destination = Uri.encodeComponent('${pharmacy.name}, ${pharmacy.address}, ${pharmacy.city}, Cameroun');
+                                        final mapUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$destination');
+                                        if (await canLaunchUrl(mapUri)) {
+                                          await launchUrl(mapUri, mode: LaunchMode.externalApplication);
+                                        } else if (context.mounted) {
+                                          AppToast.show(
+                                            context,
+                                            message: isFr
+                                                ? 'Navigation GPS vers ${pharmacy.name}'
+                                                : 'GPS navigation towards ${pharmacy.name}',
+                                            type: ToastType.info,
+                                          );
+                                        }
                                       },
                                       icon: const Icon(Icons.explore_rounded, color: Colors.white, size: 20),
                                       label: Text(
@@ -347,12 +360,20 @@ class PharmacyDetailsScreen extends ConsumerWidget {
                       _PharmaActionButton(
                         icon: Icons.language_rounded,
                         label: context.tr('pharma.website', ref: ref),
-                        onTap: () {
-                          AppToast.show(
-                            context,
-                            message: '${pharmacy.website}',
-                            type: ToastType.info,
-                          );
+                        onTap: () async {
+                          final site = pharmacy.website.startsWith('http')
+                              ? pharmacy.website
+                              : 'https://${pharmacy.website}';
+                          final siteUri = Uri.parse(site);
+                          if (await canLaunchUrl(siteUri)) {
+                            await launchUrl(siteUri, mode: LaunchMode.externalApplication);
+                          } else if (context.mounted) {
+                            AppToast.show(
+                              context,
+                              message: pharmacy.website,
+                              type: ToastType.info,
+                            );
+                          }
                         },
                       ),
                     ],

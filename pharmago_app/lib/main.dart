@@ -1,3 +1,5 @@
+import 'package:device_preview/device_preview.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
@@ -7,8 +9,13 @@ import 'core/router/app_router.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
-    const ProviderScope(
-      child: PharmaGoApp(),
+    DevicePreview(
+      // Only active on web/desktop builds — disabled on real devices
+      enabled: kIsWeb,
+      defaultDevice: Devices.ios.iPhone13,
+      builder: (context) => const ProviderScope(
+        child: PharmaGoApp(),
+      ),
     ),
   );
 }
@@ -24,8 +31,10 @@ class PharmaGoApp extends ConsumerWidget {
       title: 'PharmaGo',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      routerConfig: appRouter,
-      locale: Locale(currentLang == AppLanguage.fr ? 'fr' : 'en'),
+      routerConfig: ref.watch(appRouterProvider),
+      locale: DevicePreview.locale(context) ??
+          Locale(currentLang == AppLanguage.fr ? 'fr' : 'en'),
+      builder: DevicePreview.appBuilder,
     );
   }
 }

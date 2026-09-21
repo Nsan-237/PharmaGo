@@ -44,7 +44,7 @@ const Map<String, String> translationsEn = {
 
   // Home Screen
   'home.location': 'Yaoundé, Cameroon',
-  'home.greeting': 'Hello, Sarah 👋',
+  'home.greeting': 'Hello 👋',
   'home.subtitle': 'How can we help you today?',
   'home.searchHint': 'Search for a drug, e.g. Paracetamol',
   'home.actionSearchDrug': 'Search Drug',
@@ -125,7 +125,7 @@ const Map<String, String> translationsEn = {
   // AI Symptom Checker
   'symptom.title': 'AI Symptom Checker',
   'symptom.advisory': '(Advisory only)',
-  'symptom.greeting': "Hello Sarah! I'm here to help you describe your symptoms.",
+  'symptom.greeting': "Hello! I'm here to help you describe your symptoms.",
   'symptom.sampleUser': 'I have headache and fever since 2 days',
   'symptom.sampleAi': 'Thanks for sharing. Here are some possible causes:\n• Common Cold\n• Flu\n• Malaria\n\nPlease rest, drink plenty of water and consult a doctor if symptoms persist.',
   'symptom.disclaimer': 'This is not a diagnosis. Please consult a real doctor.',
@@ -150,7 +150,7 @@ const Map<String, String> translationsEn = {
 
   // Profile Tab
   'profile.title': 'Profile',
-  'profile.name': 'Sarah Moukeng',
+  'profile.name': 'My Profile',
   'profile.phone': '+237 6 12 34 56 78',
   'profile.personalInfo': 'Personal Information',
   'profile.addresses': 'Addresses',
