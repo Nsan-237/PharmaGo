@@ -1,24 +1,51 @@
 import React, { useState } from "react";
-import { CheckCircle, XCircle, Clock, AlertTriangle, FileText, Package } from "lucide-react";
+import { CheckCircle, XCircle, Clock, AlertTriangle, FileText, Package, X } from "lucide-react";
 import { orders as initialOrders } from "../../mockData/index";
 import { useT } from "../../i18n/TranslationContext";
+import { useLang } from "../../i18n/TranslationContext";
+import { apiUpdateOrderStatus } from "../../utils/api";
+import { useToast } from "../../components/shared/Toast";
+import { timeAgo } from "../../utils/timeUtils";
 import StatusBadge from "../../components/shared/StatusBadge";
 import { PageHeader, Card } from "../../components/shared/UI";
 
 export default function CashierConfirmation() {
   const t = useT();
+  const { lang } = useLang();
+  const isFr = lang === "fr";
+  const toast = useToast();
   const [orders, setOrders]   = useState(initialOrders.filter(o => o.status === "en_attente"));
   const [history, setHistory] = useState([]);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
 
-  const confirm = (id) => {
+  const confirm = async (id) => {
     const order = orders.find(o => o.id === id);
+    try { await apiUpdateOrderStatus(id, { status: "confirme" }); } catch (_) {}
     setOrders(prev => prev.filter(o => o.id !== id));
     setHistory(prev => [{ ...order, status: "confirme", processedAt: new Date().toISOString() }, ...prev]);
+    toast.success(
+      isFr ? `Commande ${id} confirmée avec succès.` : `Order ${id} confirmed successfully.`,
+      isFr ? "✅ Commande confirmée" : "✅ Order confirmed"
+    );
   };
-  const reject = (id) => {
+
+  const openReject = (id) => {
+    setRejectTarget(id);
+    setRejectReason("");
+  };
+
+  const confirmReject = async () => {
+    const id = rejectTarget;
     const order = orders.find(o => o.id === id);
+    try { await apiUpdateOrderStatus(id, { status: "rejete", reason: rejectReason }); } catch (_) {}
     setOrders(prev => prev.filter(o => o.id !== id));
     setHistory(prev => [{ ...order, status: "rejete", processedAt: new Date().toISOString() }, ...prev]);
+    toast.warning(
+      isFr ? `Commande ${id} rejetée.` : `Order ${id} rejected.`,
+      isFr ? "Commande rejetée" : "Order rejected"
+    );
+    setRejectTarget(null);
   };
 
   return (
@@ -60,7 +87,7 @@ export default function CashierConfirmation() {
                       <div>
                         <p className="font-mono font-bold text-sm" style={{ color: "#0F9B8E" }}>{order.id}</p>
                         <p className="text-xs text-gray-400">
-                          {new Date(order.createdAt).toLocaleString([], { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}
+                          {timeAgo(order.createdAt, lang)}
                         </p>
                       </div>
                     </div>
@@ -111,7 +138,7 @@ export default function CashierConfirmation() {
                         style={{ background: "#0F9B8E" }}>
                         <CheckCircle size={18} /> {t("cashier.confirm")}
                       </button>
-                      <button onClick={() => reject(order.id)}
+                      <button onClick={() => openReject(order.id)}
                         className="flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm bg-red-500 hover:bg-red-600 transition-all active:scale-95">
                         <XCircle size={18} /> {t("cashier.rejectOrder")}
                       </button>
@@ -145,6 +172,63 @@ export default function CashierConfirmation() {
           )}
         </div>
       </div>
+
+      {/* Reject reason modal */}
+      {rejectTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          style={{ background: "rgba(13,59,54,0.4)", backdropFilter: "blur(4px)" }}
+          onClick={() => setRejectTarget(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-fade-in-up"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: "#DCE6E2" }}>
+              <p className="font-bold font-sora" style={{ color: "#0D3B36" }}>
+                {isFr ? "Rejeter cette commande" : "Reject this order"}
+              </p>
+              <button onClick={() => setRejectTarget(null)} className="p-1 rounded text-gray-400 hover:text-gray-600">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: "#FEE2E2" }}>
+                <AlertTriangle size={15} className="text-red-500 shrink-0" />
+                <p className="text-sm text-red-700 font-medium">{rejectTarget}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: "#0D3B36" }}>
+                  {isFr ? "Motif du rejet (optionnel)" : "Rejection reason (optional)"}
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={e => setRejectReason(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none resize-none transition-all"
+                  style={{ borderColor: "#DCE6E2", background: "#FBFBF8" }}
+                  placeholder={isFr ? "Ex: stock insuffisant, ordonnance invalide..." : "E.g. out of stock, invalid prescription..."}
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRejectTarget(null)}
+                  className="flex-1 py-2.5 rounded-lg border font-semibold text-sm hover:bg-gray-50 transition-all"
+                  style={{ borderColor: "#DCE6E2", color: "#0D3B36" }}
+                >
+                  {isFr ? "Annuler" : "Cancel"}
+                </button>
+                <button
+                  onClick={confirmReject}
+                  className="flex-1 py-2.5 rounded-lg text-white font-semibold text-sm bg-red-500 hover:bg-red-600 transition-all active:scale-95"
+                >
+                  {isFr ? "Confirmer le rejet" : "Confirm rejection"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

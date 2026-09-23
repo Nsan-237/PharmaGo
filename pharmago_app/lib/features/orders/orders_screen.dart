@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/mock_data/mock_data.dart';
 import '../../core/providers/orders_provider.dart';
+import '../../core/widgets/app_toast.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
@@ -118,14 +119,59 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
   }
 }
 
-class _OrderListItem extends StatelessWidget {
+class _OrderListItem extends ConsumerWidget {
   final ClientOrderModel order;
   final bool isFr;
 
   const _OrderListItem({required this.order, required this.isFr});
 
+  Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          isFr ? 'Annuler la commande ?' : 'Cancel this order?',
+          style: GoogleFonts.sora(fontWeight: FontWeight.bold, color: AppColors.textDark),
+        ),
+        content: Text(
+          isFr
+              ? 'Cette action est irréversible. La commande ${order.id} sera annulée.'
+              : 'This action is irreversible. Order ${order.id} will be cancelled.',
+          style: GoogleFonts.inter(fontSize: 13, color: AppColors.textBody),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(isFr ? 'Non, garder' : 'Keep it',
+                style: GoogleFonts.inter(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(isFr ? 'Oui, annuler' : 'Yes, cancel',
+                style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await ref.read(ordersProvider.notifier).cancelOrder(order.id);
+      if (context.mounted) {
+        AppToast.show(
+          context,
+          message: isFr ? 'Commande ${order.id} annulée.' : 'Order ${order.id} cancelled.',
+          type: ToastType.warning,
+        );
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isInProgress = order.status == 'in_progress' || order.status == 'en_attente';
     final isDelivered = order.status == 'completed' || order.status == 'livree';
 
@@ -134,15 +180,15 @@ class _OrderListItem extends StatelessWidget {
     String statusLabel;
 
     if (isInProgress) {
-      badgeBg = AppColors.primaryLight;
+      badgeBg   = AppColors.primaryLight;
       badgeText = AppColors.primary;
       statusLabel = isFr ? 'En cours' : 'In Progress';
     } else if (isDelivered) {
-      badgeBg = AppColors.successLight;
+      badgeBg   = AppColors.successLight;
       badgeText = AppColors.success;
       statusLabel = isFr ? 'Livrée' : 'Delivered';
     } else {
-      badgeBg = AppColors.errorLight;
+      badgeBg   = AppColors.errorLight;
       badgeText = AppColors.error;
       statusLabel = isFr ? 'Annulée' : 'Cancelled';
     }
@@ -230,6 +276,28 @@ class _OrderListItem extends StatelessWidget {
                     color: isInProgress ? AppColors.primaryDark : AppColors.textMuted,
                   ),
                 ),
+                // Cancel button — only for pending/in-progress orders
+                if (isInProgress) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _confirmCancel(context, ref),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorLight,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isFr ? 'Annuler' : 'Cancel',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ],

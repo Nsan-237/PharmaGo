@@ -3,16 +3,16 @@ import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useRole } from "../../App";
 import { useT, useLang } from "../../i18n/TranslationContext";
 import NotificationPanel, { mockNotifications } from "./NotificationPanel";
+import { orders as mockOrders } from "../../mockData/index";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Clock, Settings,
-  ClipboardCheck, FileText, History, Truck, BarChart2, Building2,
-  AlertTriangle, ChevronDown, Menu, X, Bell, LogOut, MessageSquare
+  ClipboardCheck, FileText, BarChart2, Building2,
+  AlertTriangle, ChevronDown, Menu, X, Bell, LogOut, MessageSquare, Truck
 } from "lucide-react";
 
 const roleColorMap = {
   pharmacy_admin: "bg-primary",
   cashier:        "bg-purple-600",
-  delivery_agent: "bg-orange-600",
   platform_admin: "bg-indigo-600",
 };
 
@@ -33,10 +33,6 @@ const roleNavKeys = {
     { icon: ShoppingBag,     key: "nav.history",         to: "/cashier/history" },
     { icon: MessageSquare,   key: "nav.messagingAgents", to: "/cashier/messaging" },
   ],
-  delivery_agent: [
-    { icon: Truck,           key: "nav.deliveries",   to: "/agent/deliveries" },
-    { icon: History,         key: "nav.history",      to: "/agent/history" },
-  ],
   platform_admin: [
     { icon: LayoutDashboard, key: "nav.dashboard",    to: "/platform-admin/dashboard" },
     { icon: Users,           key: "nav.users",        to: "/platform-admin/users" },
@@ -52,11 +48,10 @@ const roleNavKeys = {
 const roleRouteMap = {
   pharmacy_admin: "/pharmacy-admin/dashboard",
   cashier:        "/cashier/confirmation",
-  delivery_agent: "/agent/deliveries",
   platform_admin: "/platform-admin/dashboard",
 };
 
-const ALL_ROLES = ["pharmacy_admin", "cashier", "delivery_agent", "platform_admin"];
+const ALL_ROLES = ["pharmacy_admin", "cashier", "platform_admin"];
 
 export default function DashboardLayout() {
   const { role, setRole } = useRole();
@@ -71,6 +66,8 @@ export default function DashboardLayout() {
   const navItems = roleNavKeys[role] || roleNavKeys.pharmacy_admin;
   const color    = roleColorMap[role] || roleColorMap.pharmacy_admin;
   const unreadCount = notifications.filter(n => !n.read).length;
+  // Count pending orders for cashier badge
+  const pendingOrderCount = mockOrders.filter(o => o.status === "en_attente").length;
 
   const handleRoleSwitch = (newRole) => {
     setRole(newRole);
@@ -139,22 +136,32 @@ export default function DashboardLayout() {
         </div>
 
         {/* Navigation links */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group
-                ${isActive
-                  ? "bg-primary text-white"
-                  : "text-white/60 hover:bg-white/10 hover:text-white"}`
-              }
-            >
-              <item.icon size={18} className="shrink-0" />
-              {sidebarOpen && <span className="text-sm font-medium">{t(item.key)}</span>}
-            </NavLink>
-          ))}
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          {navItems.map((item, idx) => {
+            const isCashierQueue = item.to === "/cashier/confirmation";
+            const showBadge = isCashierQueue && role === "cashier" && pendingOrderCount > 0;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group animate-fade-in-up`
+                  + (isActive
+                    ? " bg-white/15 text-white font-semibold"
+                    : " text-white/60 hover:bg-white/10 hover:text-white")
+                }
+                style={{ animationDelay: `${idx * 40}ms` }}
+              >
+                <item.icon size={18} className="shrink-0" />
+                {sidebarOpen && <span className="text-sm flex-1">{t(item.key)}</span>}
+                {sidebarOpen && showBadge && (
+                  <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-400 text-[10px] font-bold text-white px-1.5 badge-pulse">
+                    {pendingOrderCount}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* Logout */}

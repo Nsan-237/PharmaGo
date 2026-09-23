@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/pending_order_provider.dart';
 
 enum MockConfirmationResult { pending, confirmed, rejected }
 
@@ -58,9 +59,20 @@ class _OrderPendingConfirmationScreenState
     final lang = ref.watch(localeProvider);
     final isFr = lang == AppLanguage.fr;
     final auth = ref.watch(authProvider);
+    final pendingOrder = ref.watch(pendingOrderProvider);
     final clientName = auth.isAuthenticated && auth.fullName.isNotEmpty ? auth.fullName : 'Client';
     final clientPhone = auth.phone.isNotEmpty ? auth.phone : '+237 6xx xx xx xx';
     final clientInitials = auth.initials;
+
+    // Dynamic values from the order flow (fallback to sensible defaults for demo)
+    final drugName = pendingOrder?.drugName ?? 'Médicament commandé';
+    final drugLabel = pendingOrder?.drugLabel ?? drugName;
+    final pharmacyName = pendingOrder?.pharmacyName ?? 'Pharmacie du Centre';
+    final total = pendingOrder?.total ?? 2200;
+    final unitPrice = pendingOrder?.unitPrice ?? 1200;
+    final quantity = pendingOrder?.quantity ?? 1;
+    final totalStr = '${(total).toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]} ")} FCFA';
+    final unitPriceStr = '${(unitPrice * quantity).toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]} ")} FCFA';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -318,7 +330,7 @@ class _OrderPendingConfirmationScreenState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Pharmacie du Centre',
+                                pharmacyName,
                                 style: GoogleFonts.sora(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -334,7 +346,7 @@ class _OrderPendingConfirmationScreenState
                         ],
                       ),
                       Text(
-                        '2 200 FCFA',
+                        totalStr,
                         style: GoogleFonts.sora(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -352,14 +364,14 @@ class _OrderPendingConfirmationScreenState
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Amoxicillin 500mg',
+                        drugLabel,
                         style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textDark),
                       ),
                       Text(
-                        'x1 • 1 200 FCFA',
+                        'x$quantity • $unitPriceStr',
                         style: GoogleFonts.inter(
                             fontSize: 13, color: AppColors.textBody),
                       ),

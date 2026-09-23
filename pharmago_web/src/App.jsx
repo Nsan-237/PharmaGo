@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "./components/shared/DashboardLayout";
 import { TranslationProvider } from "./i18n/TranslationContext";
+import { ToastProvider } from "./components/shared/Toast";
+import NotFound from "./features/shared/NotFound";
 
 // Pharmacy Admin
 import PharmaDashboard from "./features/pharmacyAdmin/Dashboard";
@@ -17,9 +19,7 @@ import CashierConfirmation from "./features/cashier/OrderConfirmation";
 import CashierPrescriptions from "./features/cashier/Prescriptions";
 import CashierHistory from "./features/cashier/History";
 
-// Delivery Agent
-import AgentDeliveries from "./features/deliveryAgent/Deliveries";
-import AgentHistory from "./features/deliveryAgent/AgentHistory";
+
 
 // Platform Admin
 import PlatformDashboard from "./features/platformAdmin/Dashboard";
@@ -43,7 +43,6 @@ function getInitialRole() {
       if (u.role === "PLATFORM_ADMIN") return "platform_admin";
       if (u.role === "PHARMACY_ADMIN") return "pharmacy_admin";
       if (u.role === "CASHIER") return "cashier";
-      if (u.role === "DELIVERY_AGENT") return "delivery_agent";
     }
   } catch (_) {}
   return "pharmacy_admin";
@@ -55,7 +54,6 @@ function RootRedirect() {
   if (!token) return <Navigate to="/login" replace />;
   if (role === "platform_admin") return <Navigate to="/platform-admin/dashboard" replace />;
   if (role === "cashier") return <Navigate to="/cashier/confirmation" replace />;
-  if (role === "delivery_agent") return <Navigate to="/agent/deliveries" replace />;
   return <Navigate to="/pharmacy-admin/dashboard" replace />;
 }
 
@@ -64,51 +62,52 @@ function App() {
 
   return (
     <TranslationProvider>
-      <RoleContext.Provider value={{ role, setRole }}>
-        <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<RootRedirect />} />
-          <Route path="/login" element={<Login />} />
-          
-          {/* Pharmacy Admin */}
-          <Route path="/pharmacy-admin" element={<DashboardLayout />}>
-            <Route path="dashboard" element={<PharmaDashboard />} />
-            <Route path="stock" element={<PharmaStock />} />
-            <Route path="orders" element={<PharmaOrders />} />
-            <Route path="agents" element={<PharmaAgents />} />
-            <Route path="horaires" element={<PharmaHoraires />} />
-            <Route path="messaging" element={<MessagingPage />} />
-            <Route path="settings" element={<PharmSettings />} />
-          </Route>
+      <ToastProvider>
+        <RoleContext.Provider value={{ role, setRole }}>
+          <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="/login" element={<Login />} />
+            
+            {/* Pharmacy Admin */}
+            <Route path="/pharmacy-admin" element={<DashboardLayout />}>
+              <Route path="dashboard" element={<PharmaDashboard />} />
+              <Route path="stock" element={<PharmaStock />} />
+              <Route path="orders" element={<PharmaOrders />} />
+              <Route path="agents" element={<PharmaAgents />} />
+              <Route path="horaires" element={<PharmaHoraires />} />
+              <Route path="messaging" element={<MessagingPage />} />
+              <Route path="settings" element={<PharmSettings />} />
+            </Route>
 
-          {/* Cashier */}
-          <Route path="/cashier" element={<DashboardLayout />}>
-            <Route path="confirmation" element={<CashierConfirmation />} />
-            <Route path="prescriptions" element={<CashierPrescriptions />} />
-            <Route path="history" element={<CashierHistory />} />
-            <Route path="messaging" element={<MessagingPage />} />
-          </Route>
+            {/* Cashier */}
+            <Route path="/cashier" element={<DashboardLayout />}>
+              <Route path="confirmation" element={<CashierConfirmation />} />
+              <Route path="prescriptions" element={<CashierPrescriptions />} />
+              <Route path="history" element={<CashierHistory />} />
+              <Route path="messaging" element={<MessagingPage />} />
+            </Route>
 
-          {/* Delivery Agent */}
-          <Route path="/agent" element={<DashboardLayout />}>
-            <Route path="deliveries" element={<AgentDeliveries />} />
-            <Route path="history" element={<AgentHistory />} />
-          </Route>
 
-          {/* Platform Admin */}
-          <Route path="/platform-admin" element={<DashboardLayout />}>
-            <Route path="dashboard" element={<PlatformDashboard />} />
-            <Route path="users" element={<PlatformUsers />} />
-            <Route path="pharmacies" element={<PlatformPharmacies />} />
-            <Route path="orders" element={<PlatformOrders />} />
-            <Route path="disputes" element={<PlatformDisputes />} />
-            <Route path="reports" element={<PlatformReports />} />
-            <Route path="messaging" element={<MessagingPage />} />
-            <Route path="settings" element={<PharmSettings />} />
-          </Route>
-        </Routes>
-        </BrowserRouter>
-      </RoleContext.Provider>
+
+            {/* Platform Admin */}
+            <Route path="/platform-admin" element={<DashboardLayout />}>
+              <Route path="dashboard" element={<PlatformDashboard />} />
+              <Route path="users" element={<PlatformUsers />} />
+              <Route path="pharmacies" element={<PlatformPharmacies />} />
+              <Route path="orders" element={<PlatformOrders />} />
+              <Route path="disputes" element={<PlatformDisputes />} />
+              <Route path="reports" element={<PlatformReports />} />
+              <Route path="messaging" element={<MessagingPage />} />
+              <Route path="settings" element={<PharmSettings />} />
+            </Route>
+
+            {/* 404 catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          </BrowserRouter>
+        </RoleContext.Provider>
+      </ToastProvider>
     </TranslationProvider>
   );
 }

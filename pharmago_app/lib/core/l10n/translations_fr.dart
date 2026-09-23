@@ -28,10 +28,10 @@ const Map<String, String> translationsFr = {
   'auth.phone': 'Numéro de téléphone',
   'auth.phoneHint': '6XX XX XX XX',
   'auth.sendOtp': 'Recevoir le code OTP',
-  'auth.otpTitle': 'Vérification du numéro',
-  'auth.otpSubtitle': 'Entrez le code à 6 chiffres envoyé au',
+  'auth.otpTitle': 'Vérifiez votre email',
+  'auth.otpSubtitle': 'Un code à 6 chiffres a été envoyé à',
   'auth.verify': 'Vérifier & Continuer',
-  'auth.resend': 'Renvoyer le code',
+  'auth.resend': 'Renvoyer le Code',
   'auth.resendIn': 'Renvoyer le code dans',
   'auth.registerTitle': 'Complétez votre profil',
   'auth.fullName': 'Nom complet',
@@ -160,4 +160,10 @@ const Map<String, String> translationsFr = {
   'profile.helpSupport': 'Aide & Support',
   'profile.logout': 'Déconnexion',
   'profile.language': 'Langue / Language',
+  // Astuce démo OTP + nouvelles clés commande
+  'auth.otpDemo': 'Démo : entrez n’importe quels 6 chiffres',
+
+  // Commande confirmée → étape paiement
+  'order.proceedToPayment': 'Procéder au Paiement',
+  'order.confirmedPaymentStep': 'Étape suivante : choisissez votre mode de paiement',
 };

@@ -163,6 +163,31 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                         height: 1.35,
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    // Payment reminder chip
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.payments_rounded, size: 13, color: Color(0xFF16A34A)),
+                          const SizedBox(width: 5),
+                          Text(
+                            context.tr('order.confirmedPaymentStep', ref: ref),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF16A34A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -203,7 +228,7 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                           Container(
                             width: 44,
                             height: 44,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppColors.primaryLight,
                               shape: BoxShape.circle,
                             ),
@@ -243,7 +268,7 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                           Container(
                             width: 38,
                             height: 38,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppColors.primaryLight,
                               shape: BoxShape.circle,
                             ),
@@ -264,11 +289,20 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                 opacity: _fadeAnimation,
                 child: Column(
                   children: [
+                    // Primary: Proceed to Payment
                     SizedBox(
                       width: double.infinity,
                       height: 52,
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/track-order'),
+                      child: ElevatedButton.icon(
+                        onPressed: () => context.go('/payment'),
+                        icon: const Icon(Icons.payments_rounded, color: Colors.white, size: 20),
+                        label: Text(
+                          context.tr('order.proceedToPayment', ref: ref),
+                          style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
@@ -277,16 +311,10 @@ class _OrderConfirmedScreenState extends ConsumerState<OrderConfirmedScreen>
                           shadowColor:
                               AppColors.primary.withValues(alpha: 0.3),
                         ),
-                        child: Text(
-                          context.tr('order.trackOrder', ref: ref),
-                          style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
-                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
+                    // Secondary: Back to Home
                     SizedBox(
                       width: double.infinity,
                       height: 48,

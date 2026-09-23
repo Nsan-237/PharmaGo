@@ -93,4 +93,16 @@ class ApiClient {
   Future<Response> getDriverLocation(String orderId) async {
     return await _dio.get('/tracking/location/$orderId');
   }
+
+  /// Update the status of a specific order.
+  Future<Response> updateOrderStatus(String orderId, Map<String, dynamic> data) async {
+    return await _dio.put('/orders/$orderId/status', data: data);
+  }
+
+  /// Convenience singleton for unauthenticated / public calls.
+  static ApiClient? _instance;
+  static ApiClient get instance => _instance ??= ApiClient();
+  static void setToken(String token) {
+    _instance = ApiClient(authToken: token);
+  }
 }

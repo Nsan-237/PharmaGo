@@ -9,6 +9,7 @@ import '../../core/services/campay_service.dart';
 import 'package:intl/intl.dart';
 import '../../core/mock_data/mock_data.dart';
 import '../../core/providers/orders_provider.dart';
+import '../../core/providers/pending_order_provider.dart';
 
 class PaymentScreen extends ConsumerStatefulWidget {
   const PaymentScreen({super.key});
@@ -23,7 +24,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   late final TextEditingController _phoneController = TextEditingController(
     text: '',
   );
-  bool _isProcessing = false;
+  final bool _isProcessing = false;
 
   @override
   void dispose() {
@@ -42,9 +43,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         message: isFr
             ? 'Commande confirmée ! Paiement en espèces à la livraison.'
             : 'Order confirmed! Cash payment on delivery.',
-        type: ToastType.info,
+        type: ToastType.success,
       );
-      context.go('/order-confirmed');
+      context.go('/track-order');
       return;
     }
 
@@ -66,20 +67,27 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   void _addOrderToState() {
     final now = DateTime.now();
     final formattedDate = DateFormat('dd MMM yyyy, h:mm a').format(now);
-    
+    final pendingOrder = ref.read(pendingOrderProvider);
+
+    final drugEntry = pendingOrder != null
+        ? '${pendingOrder.drugLabel} • ${(pendingOrder.unitPrice * pendingOrder.quantity).toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]} ")} FCFA'
+        : 'Médicament (x1)';
+
     final newOrder = ClientOrderModel(
       id: '#PGO-${now.millisecondsSinceEpoch.toString().substring(9)}',
-      pharmacyName: 'Pharmacie du Centre',
+      pharmacyName: pendingOrder?.pharmacyName ?? 'Pharmacie du Centre',
       address: 'Bastos, Yaoundé',
-      drugs: ['Amoxicillin 500mg (x1)'],
-      total: 2200,
+      drugs: [drugEntry],
+      total: pendingOrder?.total ?? 2200,
       status: 'en_attente',
       createdAt: formattedDate,
       estimatedTime: '25 - 35 min',
-      isDelivery: true,
+      isDelivery: pendingOrder?.deliveryOption == 'home',
     );
-    
+
     ref.read(ordersProvider.notifier).addOrder(newOrder);
+    // Clear pending order after submitting
+    ref.read(pendingOrderProvider.notifier).clear();
   }
 
   void _showCampayUssdDialog(bool isFr) {
@@ -111,7 +119,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 : 'Campay mobile payment approved successfully!',
             type: ToastType.success,
           );
-          context.go('/order-confirmed');
+          context.go('/track-order');
         },
       ),
     );
@@ -129,7 +137,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textDark, size: 20),
-          onPressed: () => context.go('/orders'),
+          onPressed: () => context.go('/order-confirmed'),
         ),
         title: Text(
           context.tr('payment.title', ref: ref),

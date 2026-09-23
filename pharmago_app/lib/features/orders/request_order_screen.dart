@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/widgets/app_toast.dart';
+import '../../core/providers/pending_order_provider.dart';
 
 class RequestOrderScreen extends ConsumerStatefulWidget {
   final String? initialDrugName;
@@ -501,7 +502,18 @@ class _RequestOrderScreenState extends ConsumerState<RequestOrderScreen> {
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: () => context.go('/order-pending-confirmation'),
+            onPressed: () {
+              // Store order details for consumption by confirmation/payment screens
+              ref.read(pendingOrderProvider.notifier).set(PendingOrderDetails(
+                drugName: _drugName,
+                quantity: _quantity,
+                unitPrice: _unitPrice,
+                pharmacyName: 'Pharmacie du Centre',
+                deliveryOption: _deliveryOption,
+                total: _totalPrice,
+              ));
+              context.go('/order-pending-confirmation');
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

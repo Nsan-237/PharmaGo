@@ -2,13 +2,18 @@ import React, { useState, useEffect } from "react";
 import { Plus, Pencil, Trash2, CheckCircle, XCircle, Phone, MapPin, Search, Download, Clock, Shield, X } from "lucide-react";
 import { pharmacies as initialPharmacies } from "../../mockData/index";
 import { useT } from "../../i18n/TranslationContext";
+import { useLang } from "../../i18n/TranslationContext";
 import { exportToCSV } from "../../utils/exportUtils";
 import { apiGetPharmacies, apiCreatePharmacy, apiUpdatePharmacyFull, apiDeletePharmacy, apiApprovePharmacy } from "../../utils/api";
 import StatusBadge from "../../components/shared/StatusBadge";
 import { PageHeader, Card, TableWrapper, Th, Td } from "../../components/shared/UI";
+import { useToast } from "../../components/shared/Toast";
 
 export default function PlatformPharmacies() {
   const t = useT();
+  const { lang } = useLang();
+  const isFr = lang === "fr";
+  const toast = useToast();
   const [pharmacies, setPharmacies] = useState(initialPharmacies);
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
@@ -110,8 +115,12 @@ export default function PlatformPharmacies() {
 
       setPharmacies((prev) => [newEntry, ...prev]);
       setIsAddOpen(false);
+      toast.success(
+        isFr ? `Pharmacie "${formData.name}" ajoutée avec succès.` : `Pharmacy "${formData.name}" added successfully.`,
+        isFr ? "Pharmacie créée" : "Pharmacy created"
+      );
     } catch (err) {
-      alert(err.message || "Erreur lors de l'ajout de la pharmacie");
+      toast.error(err.message || (isFr ? "Erreur lors de l'ajout de la pharmacie" : "Error adding pharmacy"));
     }
   };
 
@@ -158,8 +167,12 @@ export default function PlatformPharmacies() {
         )
       );
       setIsEditOpen(false);
+      toast.success(
+        isFr ? `Informations de "${formData.name}" mises à jour.` : `"${formData.name}" updated successfully.`,
+        isFr ? "Pharmacie modifiée" : "Pharmacy updated"
+      );
     } catch (err) {
-      alert(err.message || "Erreur lors de la mise à jour");
+      toast.error(err.message || (isFr ? "Erreur lors de la mise à jour" : "Update failed"));
     }
   };
 
@@ -174,17 +187,26 @@ export default function PlatformPharmacies() {
       await apiDeletePharmacy(selectedPharma.id);
       setPharmacies((prev) => prev.filter((p) => p.id !== selectedPharma.id));
       setIsDeleteOpen(false);
+      toast.success(
+        isFr ? `Pharmacie supprimée avec succès.` : `Pharmacy deleted successfully.`,
+        isFr ? "Supprimée" : "Deleted"
+      );
     } catch (err) {
-      alert(err.message || "Erreur lors de la suppression");
+      toast.error(err.message || (isFr ? "Erreur lors de la suppression" : "Delete failed"));
     }
   };
 
   const approve = async (id) => {
+    const pharma = pharmacies.find(p => p.id === id);
     try {
       await apiApprovePharmacy(id, true);
     } catch (_) {}
     setPharmacies((prev) =>
       prev.map((p) => (p.id === id ? { ...p, approved: true, status: "active" } : p))
+    );
+    toast.success(
+      isFr ? `"${pharma?.name}" approuvée et activée.` : `"${pharma?.name}" approved and activated.`,
+      isFr ? "✅ Pharmacie approuvée" : "✅ Pharmacy approved"
     );
   };
 
@@ -198,6 +220,17 @@ export default function PlatformPharmacies() {
     setPharmacies((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: newStatus, approved: newStatus === "active" } : p))
     );
+    if (newStatus === "suspended") {
+      toast.warning(
+        isFr ? `"${pharma?.name}" a été suspendue.` : `"${pharma?.name}" has been suspended.`,
+        isFr ? "Pharmacie suspendue" : "Pharmacy suspended"
+      );
+    } else {
+      toast.success(
+        isFr ? `"${pharma?.name}" réactivée avec succès.` : `"${pharma?.name}" reactivated successfully.`,
+        isFr ? "Pharmacie réactivée" : "Pharmacy reactivated"
+      );
+    }
   };
 
   // ── Filters ──────────────────────────────────────────────────────────────

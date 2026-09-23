@@ -28,10 +28,10 @@ const Map<String, String> translationsEn = {
   'auth.phone': 'Phone number',
   'auth.phoneHint': '6XX XX XX XX',
   'auth.sendOtp': 'Get Verification Code',
-  'auth.otpTitle': 'Verify Phone Number',
-  'auth.otpSubtitle': 'Enter the 6-digit code sent to',
+  'auth.otpTitle': 'Verify your email',
+  'auth.otpSubtitle': 'A 6-digit code was sent to',
   'auth.verify': 'Verify & Continue',
-  'auth.resend': 'Resend code',
+  'auth.resend': 'Resend Code',
   'auth.resendIn': 'Resend code in',
   'auth.registerTitle': 'Complete Your Profile',
   'auth.fullName': 'Full Name',
@@ -160,4 +160,10 @@ const Map<String, String> translationsEn = {
   'profile.helpSupport': 'Help & Support',
   'profile.logout': 'Logout',
   'profile.language': 'Language / Langue',
+  // OTP Demo hint + new order keys
+  'auth.otpDemo': 'Demo: enter any 6 digits',
+
+  // Order Confirmed → Payment step
+  'order.proceedToPayment': 'Proceed to Payment',
+  'order.confirmedPaymentStep': 'Next step: choose your payment method',
 };

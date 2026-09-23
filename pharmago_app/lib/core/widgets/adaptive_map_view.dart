@@ -297,10 +297,10 @@ class _OsmMapTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FlutterMap(
-      options: MapOptions(
+      options: const MapOptions(
         initialCenter: _douala,
         initialZoom: 14.8,
-        interactionOptions: const InteractionOptions(
+        interactionOptions: InteractionOptions(
           flags: InteractiveFlag.pinchZoom |
               InteractiveFlag.drag |
               InteractiveFlag.doubleTapZoom,
@@ -345,11 +345,11 @@ class _OsmMapTile extends StatelessWidget {
               child: _UserLocationMarker(pulseController: pulseController),
             ),
             // Pharmacy pin marker
-            Marker(
+            const Marker(
               point: _pharmacyLatLng,
               width: 140,
               height: 58,
-              child: const _PharmacyMarker(),
+              child: _PharmacyMarker(),
             ),
           ],
         ),

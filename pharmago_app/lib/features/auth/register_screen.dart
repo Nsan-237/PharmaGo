@@ -83,10 +83,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (success) {
       AppToast.show(context,
           message: isFr
-              ? 'Bienvenue sur PharmaGo !'
-              : 'Welcome to PharmaGo!',
+              ? 'Compte créé ! Vérifiez votre email 📧'
+              : 'Account created! Check your email 📧',
           type: ToastType.success);
-      context.go('/home');
+      context.go('/otp', extra: {
+        'contact': _emailController.text.trim(),
+        'isEmail': true,
+      });
     } else {
       final error = ref.read(authProvider).error;
       AppToast.show(context,

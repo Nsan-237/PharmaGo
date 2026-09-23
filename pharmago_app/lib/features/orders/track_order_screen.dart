@@ -39,7 +39,7 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
 
   // Chat messages (local state, loaded from DB in real flow)
   final List<_ChatMessage> _messages = [
-    _ChatMessage(text: 'Je suis en route 🛵', isFromAgent: true, time: '14:32'),
+    const _ChatMessage(text: 'Je suis en route 🛵', isFromAgent: true, time: '14:32'),
   ];
 
   @override
@@ -439,10 +439,11 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
             ),
             onPressed: () async {
               final uri = Uri.parse('tel:+237222231160');
+              final ctx = context;
               if (await canLaunchUrl(uri)) {
                 await launchUrl(uri);
-              } else if (context.mounted) {
-                AppToast.show(context, message: 'Appel vers Pharmacie Centrale...', type: ToastType.info);
+              } else if (ctx.mounted) {
+                AppToast.show(ctx, message: 'Appel vers Pharmacie Centrale...', type: ToastType.info);
               }
             },
           ),
@@ -495,10 +496,11 @@ class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
             onPressed: () async {
               final cleanPhone = _mockAgentPhone.replaceAll(RegExp(r'[^0-9+]'), '');
               final uri = Uri.parse('tel:$cleanPhone');
+              final ctx = context;
               if (await canLaunchUrl(uri)) {
                 await launchUrl(uri);
-              } else if (context.mounted) {
-                AppToast.show(context,
+              } else if (ctx.mounted) {
+                AppToast.show(ctx,
                   message: isFr ? 'Composition du $_mockAgentPhone...' : 'Dialing $_mockAgentPhone...',
                   type: ToastType.info);
               }

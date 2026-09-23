@@ -1,20 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Search, Download, FileText, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Download, FileText, AlertTriangle } from "lucide-react";
 import { drugs as initialDrugs } from "../../mockData/index";
 import { useT } from "../../i18n/TranslationContext";
+import { useLang } from "../../i18n/TranslationContext";
 import { exportToCSV, exportToPDF } from "../../utils/exportUtils";
 import { apiSearchProducts, apiAddProduct, apiUpdateProduct, apiDeleteProduct } from "../../utils/api";
 import StatusBadge from "../../components/shared/StatusBadge";
+import { useToast } from "../../components/shared/Toast";
 import { PageHeader, Card, TableWrapper, Th, Td, PrimaryButton, SecondaryButton, Modal, InputField, SelectField } from "../../components/shared/UI";
 
 export default function PharmaStock() {
   const t = useT();
+  const { lang } = useLang();
+  const isFr = lang === "fr";
+  const toast = useToast();
   const [drugs, setDrugs] = useState(initialDrugs);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editDrug, setEditDrug] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // drug to delete
   const [form, setForm] = useState({ name: "", category: "", quantity: "", price: "", requiresPrescription: false });
 
   const categories = ["Analgésique","Antibiotique","Anti-inflammatoire","Antipaludéen","Vitamines","Pédiatrie","Cardiovasculaire","Autre"];
@@ -52,11 +58,17 @@ export default function PharmaStock() {
   const openAdd  = () => { setForm({ name: "", category: categories[0], quantity: "", price: "", requiresPrescription: false }); setEditDrug(null); setModalOpen(true); };
   const openEdit = (d) => { setForm({ name: d.name, category: d.category, quantity: d.quantity, price: d.price, requiresPrescription: d.requiresPrescription }); setEditDrug(d); setModalOpen(true); };
 
-  const deleteDrug = async (id) => {
+  const deleteDrug = async () => {
+    if (!deleteTarget) return;
     try {
-      await apiDeleteProduct(id);
+      await apiDeleteProduct(deleteTarget.id);
     } catch (_) {}
-    setDrugs(prev => prev.filter(d => d.id !== id));
+    setDrugs(prev => prev.filter(d => d.id !== deleteTarget.id));
+    toast.success(
+      isFr ? `"${deleteTarget.name}" supprimé du stock.` : `"${deleteTarget.name}" removed from stock.`,
+      isFr ? "Médicament supprimé" : "Drug deleted"
+    );
+    setDeleteTarget(null);
   };
 
   const getStatus = (qty) => qty === 0 ? "rupture" : qty <= 30 ? "stock_faible" : "en_stock";
@@ -67,34 +79,40 @@ export default function PharmaStock() {
     if (editDrug) {
       try {
         await apiUpdateProduct(editDrug.id, {
-          name: form.name,
-          category: form.category,
-          stockQuantity: qty,
-          price: prc,
+          name: form.name, category: form.category,
+          stockQuantity: qty, price: prc,
           requiresPrescription: form.requiresPrescription,
         });
       } catch (_) {}
       setDrugs(prev => prev.map(d => d.id === editDrug.id ? { ...d, ...form, quantity: qty, price: prc, status: getStatus(qty) } : d));
+      toast.success(
+        isFr ? `"${form.name}" mis à jour avec succès.` : `"${form.name}" updated successfully.`,
+        isFr ? "Stock mis à jour" : "Stock updated"
+      );
     } else {
       try {
         const storedUser = JSON.parse(localStorage.getItem("pharmago_user") || "{}");
         const pharmaId = storedUser?.pharmacy?.id || "pharmacie-centre-akwa";
-
         const res = await apiAddProduct({
-          pharmacyId: pharmaId,
-          name: form.name,
+          pharmacyId: pharmaId, name: form.name,
           category: form.category || categories[0],
-          stockQuantity: qty,
-          price: prc,
+          stockQuantity: qty, price: prc,
           requiresPrescription: form.requiresPrescription,
         });
         if (res && res.product) {
           setDrugs(prev => [...prev, { id: res.product.id, ...form, quantity: qty, price: prc, status: getStatus(qty) }]);
-          setModalOpen(false);
-          return;
+          toast.success(
+            isFr ? `"${form.name}" ajouté au stock.` : `"${form.name}" added to stock.`,
+            isFr ? "Médicament ajouté" : "Drug added"
+          );
+          setModalOpen(false); return;
         }
       } catch (_) {}
       setDrugs(prev => [...prev, { id: Date.now().toString(), ...form, quantity: qty, price: prc, status: getStatus(qty) }]);
+      toast.success(
+        isFr ? `"${form.name}" ajouté au stock.` : `"${form.name}" added to stock.`,
+        isFr ? "Médicament ajouté" : "Drug added"
+      );
     }
     setModalOpen(false);
   };
@@ -190,8 +208,20 @@ export default function PharmaStock() {
                 <Td><StatusBadge status={d.status} /></Td>
                 <Td>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => openEdit(d)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"><Pencil size={14} /></button>
-                    <button onClick={() => deleteDrug(d.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"><Trash2 size={14} /></button>
+                    <button
+                      onClick={() => openEdit(d)}
+                      className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"
+                      title={isFr ? "Modifier" : "Edit"}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(d)}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                      title={isFr ? "Supprimer" : "Delete"}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </Td>
               </tr>
@@ -226,6 +256,42 @@ export default function PharmaStock() {
               {editDrug ? t("common.save") : t("common.add")}
             </PrimaryButton>
             <SecondaryButton onClick={() => setModalOpen(false)} className="flex-1 justify-center">{t("common.cancel")}</SecondaryButton>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title={isFr ? "Confirmer la suppression" : "Confirm deletion"}
+        width="max-w-sm"
+      >
+        <div className="text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto">
+            <AlertTriangle size={26} className="text-red-500" />
+          </div>
+          <div>
+            <p className="font-semibold font-sora" style={{ color: "#0D3B36" }}>
+              {isFr ? "Supprimer ce médicament ?" : "Delete this medication?"}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              <span className="font-medium text-gray-700">&ldquo;{deleteTarget?.name}&rdquo;</span>
+              {isFr
+                ? " sera définitivement retiré du stock."
+                : " will be permanently removed from stock."}
+            </p>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <SecondaryButton onClick={() => setDeleteTarget(null)} className="flex-1 justify-center">
+              {isFr ? "Annuler" : "Cancel"}
+            </SecondaryButton>
+            <button
+              onClick={deleteDrug}
+              className="flex-1 py-2.5 rounded-lg text-white font-semibold text-sm bg-red-500 hover:bg-red-600 transition-all active:scale-95"
+            >
+              {isFr ? "Supprimer" : "Delete"}
+            </button>
           </div>
         </div>
       </Modal>

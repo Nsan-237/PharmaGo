@@ -1,18 +1,19 @@
-﻿import React from "react";
+import React from "react";
 
 export function StatCard({ title, value, icon: Icon, color = "#0F9B8E", bg = "#e6f7f6", trend, subtitle }) {
   return (
-    <div className="bg-white rounded-xl p-5 border flex items-start gap-4" style={{ borderColor: "#DCE6E2" }}>
+    <div className="bg-white rounded-xl p-5 border flex items-start gap-4 card-hover animate-fade-in-up" style={{ borderColor: "#DCE6E2" }}>
       <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: bg }}>
         <Icon size={20} style={{ color }} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-gray-500 mb-0.5">{title}</p>
-        <p className="text-2xl font-bold font-sora" style={{ color: "#0D3B36" }}>{value}</p>
+        <p className="text-2xl font-bold font-sora animate-count-up" style={{ color: "#0D3B36" }}>{value}</p>
         {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
         {trend && (
-          <p className={`text-xs mt-1 font-medium ${trend.positive ? "text-green-600" : "text-red-500"}`}>
-            {trend.positive ? "↑" : "↓"} {trend.value}
+          <p className={`text-xs mt-1 font-medium flex items-center gap-0.5 ${trend.positive ? "text-green-600" : "text-red-500"}`}>
+            <span>{trend.positive ? "↑" : "↓"}</span>
+            {trend.value}
           </p>
         )}
       </div>
@@ -22,7 +23,7 @@ export function StatCard({ title, value, icon: Icon, color = "#0F9B8E", bg = "#e
 
 export function PageHeader({ title, subtitle, action }) {
   return (
-    <div className="flex items-start justify-between mb-6">
+    <div className="flex items-start justify-between mb-6 animate-fade-in-up">
       <div>
         <h1 className="text-2xl font-bold font-sora" style={{ color: "#0D3B36" }}>{title}</h1>
         {subtitle && <p className="text-gray-500 text-sm mt-1">{subtitle}</p>}
@@ -153,6 +154,43 @@ export function SelectField({ label, value, onChange, options, required }) {
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
+    </div>
+  );
+}
+
+/**
+ * SkeletonRow — renders N placeholder rows for loading states
+ * Usage: <SkeletonRow cols={5} rows={4} />
+ */
+export function SkeletonRow({ cols = 4, rows = 3 }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, ri) => (
+        <tr key={ri}>
+          {Array.from({ length: cols }).map((_, ci) => (
+            <td key={ci} className="px-4 py-3">
+              <div
+                className="skeleton h-4 rounded"
+                style={{ width: `${60 + Math.random() * 30}%` }}
+              />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+/**
+ * EmptyState — consistent empty/no-data placeholder
+ */
+export function EmptyState({ icon: Icon, title, description, action }) {
+  return (
+    <div className="py-20 flex flex-col items-center gap-3 text-center animate-fade-in">
+      {Icon && <Icon size={48} className="text-gray-200" />}
+      <p className="font-semibold text-gray-400 font-sora">{title}</p>
+      {description && <p className="text-sm text-gray-300 max-w-xs">{description}</p>}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }

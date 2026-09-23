@@ -87,9 +87,18 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
   }
 
   void _showAddAddressDialog(bool isFr) {
-    final labelCtrl = TextEditingController();
-    final detailCtrl = TextEditingController();
-    String selectedCity = 'Yaoundé';
+    _showAddressDialog(isFr, null);
+  }
+
+  void _showEditAddressDialog(bool isFr, AddressItem existing) {
+    _showAddressDialog(isFr, existing);
+  }
+
+  void _showAddressDialog(bool isFr, AddressItem? existing) {
+    final isEdit = existing != null;
+    final labelCtrl  = TextEditingController(text: existing?.label ?? '');
+    final detailCtrl = TextEditingController(text: existing?.detail ?? '');
+    String selectedCity = existing?.city ?? 'Yaoundé';
 
     showDialog(
       context: context,
@@ -98,10 +107,15 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
-              const Icon(Icons.add_location_alt_rounded, color: AppColors.primary),
+              Icon(
+                isEdit ? Icons.edit_location_alt_rounded : Icons.add_location_alt_rounded,
+                color: AppColors.primary,
+              ),
               const SizedBox(width: 10),
               Text(
-                isFr ? 'Nouvelle adresse' : 'New Address',
+                isEdit
+                    ? (isFr ? 'Modifier l\'adresse' : 'Edit Address')
+                    : (isFr ? 'Nouvelle adresse' : 'New Address'),
                 style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
@@ -114,6 +128,10 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
                 decoration: InputDecoration(
                   labelText: isFr ? 'Nom de l\'adresse (ex: Maison)' : 'Label (e.g. Home)',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -122,6 +140,10 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
                 decoration: InputDecoration(
                   labelText: isFr ? 'Quartier / Repère précis' : 'Neighborhood / Landmark',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -132,10 +154,12 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Yaoundé', child: Text('Yaoundé')),
-                  DropdownMenuItem(value: 'Douala', child: Text('Douala')),
-                  DropdownMenuItem(value: 'Bafoussam', child: Text('Bafoussam')),
-                  DropdownMenuItem(value: 'Garoua', child: Text('Garoua')),
+                  DropdownMenuItem(value: 'Yaoundé',    child: Text('Yaoundé')),
+                  DropdownMenuItem(value: 'Douala',     child: Text('Douala')),
+                  DropdownMenuItem(value: 'Bafoussam',  child: Text('Bafoussam')),
+                  DropdownMenuItem(value: 'Garoua',     child: Text('Garoua')),
+                  DropdownMenuItem(value: 'Bertoua',    child: Text('Bertoua')),
+                  DropdownMenuItem(value: 'Maroua',     child: Text('Maroua')),
                 ],
                 onChanged: (v) {
                   if (v != null) setDialogState(() => selectedCity = v);
@@ -156,18 +180,42 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
               onPressed: () {
                 if (labelCtrl.text.trim().isEmpty || detailCtrl.text.trim().isEmpty) return;
                 setState(() {
-                  _addresses.add(AddressItem(
-                    id: 'addr-${DateTime.now().millisecondsSinceEpoch}',
-                    label: labelCtrl.text.trim(),
-                    detail: detailCtrl.text.trim(),
-                    city: selectedCity,
-                    isDefault: _addresses.isEmpty,
-                  ));
+                  if (isEdit) {
+                    // UPDATE existing
+                    final idx = _addresses.indexWhere((a) => a.id == existing.id);
+                    if (idx != -1) {
+                      _addresses[idx] = AddressItem(
+                        id: existing.id,
+                        label: labelCtrl.text.trim(),
+                        detail: detailCtrl.text.trim(),
+                        city: selectedCity,
+                        isDefault: existing.isDefault,
+                      );
+                    }
+                  } else {
+                    // CREATE new
+                    _addresses.add(AddressItem(
+                      id: 'addr-${DateTime.now().millisecondsSinceEpoch}',
+                      label: labelCtrl.text.trim(),
+                      detail: detailCtrl.text.trim(),
+                      city: selectedCity,
+                      isDefault: _addresses.isEmpty,
+                    ));
+                  }
                 });
                 Navigator.pop(dCtx);
-                AppToast.show(context, message: isFr ? 'Adresse ajoutée avec succès ✓' : 'Address added ✓', type: ToastType.success);
+                AppToast.show(
+                  context,
+                  message: isEdit
+                      ? (isFr ? 'Adresse mise à jour ✓' : 'Address updated ✓')
+                      : (isFr ? 'Adresse ajoutée ✓' : 'Address added ✓'),
+                  type: ToastType.success,
+                );
               },
-              child: Text(isFr ? 'Enregistrer' : 'Save', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(
+                isEdit ? (isFr ? 'Mettre à jour' : 'Update') : (isFr ? 'Enregistrer' : 'Save'),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -278,13 +326,30 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
                   icon: const Icon(Icons.more_vert_rounded, color: AppColors.textMuted),
                   onSelected: (val) {
                     if (val == 'default') _setDefault(addr.id);
-                    if (val == 'delete') _deleteAddress(addr.id);
+                    if (val == 'edit')    _showEditAddressDialog(isFr, addr);
+                    if (val == 'delete')  _deleteAddress(addr.id);
                   },
                   itemBuilder: (ctx) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Text(isFr ? 'Modifier' : 'Edit'),
+                        ],
+                      ),
+                    ),
                     if (!addr.isDefault)
                       PopupMenuItem(
                         value: 'default',
-                        child: Text(isFr ? 'Définir par défaut' : 'Set as default'),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.star_rounded, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Text(isFr ? 'Définir par défaut' : 'Set as default'),
+                          ],
+                        ),
                       ),
                     PopupMenuItem(
                       value: 'delete',

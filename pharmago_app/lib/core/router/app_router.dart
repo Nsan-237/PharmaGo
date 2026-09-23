@@ -6,6 +6,7 @@ import '../../features/splash/welcome_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/register_screen.dart';
+import '../../features/auth/otp_screen.dart';
 import '../../features/home/bottom_nav_shell.dart';
 import '../../features/pharmacy/search_results_screen.dart';
 import '../../features/pharmacy/pharmacy_details_screen.dart';
@@ -122,6 +123,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/otp',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return OtpScreen(
+            contact: extra?['contact'] as String? ?? '',
+            isEmail: extra?['isEmail'] as bool? ?? true,
+          );
+        },
       ),
       GoRoute(
         path: '/home',
