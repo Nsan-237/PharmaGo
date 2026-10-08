@@ -36,12 +36,24 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 
 // Root & API Health Check
-app.get("/", (req, res) => {
+app.get(["/", "/api"], (req, res) => {
   res.json({
     status: "online",
     service: "PharmaGo Backend API",
     version: "1.0.0",
-    health: "/api/health",
+    healthCheck: "/api/health",
+    endpoints: {
+      health: "GET /api/health",
+      auth: "POST /api/auth/register | POST /api/auth/login",
+      pharmacies: "GET /api/pharmacies | GET /api/pharmacies/on-duty",
+      products: "GET /api/products",
+      prescriptions: "POST /api/prescriptions/upload",
+      orders: "GET /api/orders | POST /api/orders",
+      payment: "POST /api/payment/initiate | GET /api/payment/status/:reference",
+      tracking: "GET /api/tracking/:orderId",
+      deliveryAgent: "GET /api/agent/orders",
+      admin: "GET /api/admin/metrics",
+    },
     timestamp: new Date().toISOString(),
   });
 });
