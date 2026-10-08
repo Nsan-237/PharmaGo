@@ -35,7 +35,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 
-// API Health Check
+// Root & API Health Check
+app.get("/", (req, res) => {
+  res.json({
+    status: "online",
+    service: "PharmaGo Backend API",
+    version: "1.0.0",
+    health: "/api/health",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get("/api/health", (req, res) => {
   res.json({
     status: "online",
