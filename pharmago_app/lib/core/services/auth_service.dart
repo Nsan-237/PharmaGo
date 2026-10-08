@@ -8,17 +8,10 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../network/api_constants.dart';
 
 class AuthService {
-  // Use correct base URL depending on platform
-  static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:5000/api';
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5000/api';
-    }
-    // Windows desktop, macOS, Linux, Web → localhost
-    return 'http://localhost:5000/api';
-  }
+  static String get baseUrl => ApiConstants.baseUrl;
 
   static const String _tokenKey = 'pharmago_token';
   static const String _userKey = 'pharmago_user';

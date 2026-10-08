@@ -1,18 +1,19 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../network/api_constants.dart';
 
 /// Campay Mobile Money API Service for PharmaGo.
 /// 
 /// ─── IMPORTANT: CORS BYPASS ──────────────────────────────────────────────────
 /// Flutter Web (Chrome) CANNOT call demo.campay.net directly due to browser
-/// CORS restrictions. All payment calls are routed through the local Node.js
-/// backend at localhost:5000, which calls Campay server-side without CORS issues.
+/// CORS restrictions. All payment calls are routed through the Node.js
+/// backend, which calls Campay server-side without CORS issues.
 /// Flutter Mobile (Android/iOS) uses the same backend route for consistency.
 /// ─────────────────────────────────────────────────────────────────────────────
 /// Docs: https://documenter.getpostman.com/view/2391374/T1LV8PVA
 class CampayService {
-  // ── Backend proxy URL (Node.js at localhost:5000 handles Campay auth) ───────
-  static const String _backendUrl = 'http://localhost:5000/api/payment';
+  // ── Backend proxy URL ───────────────────────────────────────────────────────
+  static String get _backendUrl => '${ApiConstants.baseUrl}/payment';
 
   // Always live — backend has real Campay credentials in .env
   static bool get isUsingRealApi => true;

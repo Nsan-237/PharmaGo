@@ -6,15 +6,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../network/api_constants.dart';
 
 class DeliveryAgentService {
-  static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:5000/api';
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5000/api';
-    }
-    return 'http://localhost:5000/api';
-  }
+  static String get baseUrl => ApiConstants.baseUrl;
 
   late final Dio _dio;
 

@@ -7,15 +7,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../mock_data/mock_data.dart';
+import '../network/api_constants.dart';
 import 'auth_provider.dart';
 
-String get _apiBase {
-  if (kIsWeb) return 'http://localhost:5000/api';
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    return 'http://10.0.2.2:5000/api';
-  }
-  return 'http://localhost:5000/api';
-}
+String get _apiBase => ApiConstants.baseUrl;
 
 // ── Pharmacy from API ─────────────────────────────────────────────────────────
 class ApiPharmacyModel {
