@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useRole } from "../../App";
 import { useT, useLang } from "../../i18n/TranslationContext";
 import NotificationPanel, { mockNotifications } from "./NotificationPanel";
-import { orders as mockOrders } from "../../mockData/index";
+import { apiGetOrders } from "../../utils/api";
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Clock, Settings,
   ClipboardCheck, FileText, BarChart2, Building2,
@@ -14,6 +14,7 @@ const roleColorMap = {
   pharmacy_admin: "bg-primary",
   cashier:        "bg-purple-600",
   platform_admin: "bg-indigo-600",
+  delivery_agent: "bg-teal-600",
 };
 
 // Nav config uses translation keys, resolved at render time
@@ -33,6 +34,12 @@ const roleNavKeys = {
     { icon: ShoppingBag,     key: "nav.history",         to: "/cashier/history" },
     { icon: MessageSquare,   key: "nav.messagingAgents", to: "/cashier/messaging" },
   ],
+  delivery_agent: [
+    { icon: Truck,           key: "nav.deliveries",      to: "/agent/deliveries" },
+    { icon: ShoppingBag,     key: "nav.history",         to: "/agent/history" },
+    { icon: MessageSquare,   key: "nav.messaging",       to: "/agent/messaging" },
+    { icon: Settings,        key: "nav.settings",        to: "/agent/settings" },
+  ],
   platform_admin: [
     { icon: LayoutDashboard, key: "nav.dashboard",    to: "/platform-admin/dashboard" },
     { icon: Users,           key: "nav.users",        to: "/platform-admin/users" },
@@ -48,10 +55,11 @@ const roleNavKeys = {
 const roleRouteMap = {
   pharmacy_admin: "/pharmacy-admin/dashboard",
   cashier:        "/cashier/confirmation",
+  delivery_agent: "/agent/deliveries",
   platform_admin: "/platform-admin/dashboard",
 };
 
-const ALL_ROLES = ["pharmacy_admin", "cashier", "platform_admin"];
+const ALL_ROLES = ["pharmacy_admin", "cashier", "delivery_agent", "platform_admin"];
 
 export default function DashboardLayout() {
   const { role, setRole } = useRole();
@@ -67,7 +75,25 @@ export default function DashboardLayout() {
   const color    = roleColorMap[role] || roleColorMap.pharmacy_admin;
   const unreadCount = notifications.filter(n => !n.read).length;
   // Count pending orders for cashier badge
-  const pendingOrderCount = mockOrders.filter(o => o.status === "en_attente").length;
+  const [pendingOrderCount, setPendingOrderCount] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchPendingCount = async () => {
+      try {
+        const res = await apiGetOrders({ status: "PENDING" });
+        if (mounted && res?.orders) {
+          setPendingOrderCount(res.orders.length);
+        }
+      } catch (_) {}
+    };
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 30_000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleRoleSwitch = (newRole) => {
     setRole(newRole);

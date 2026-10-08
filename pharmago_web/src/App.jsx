@@ -19,7 +19,9 @@ import CashierConfirmation from "./features/cashier/OrderConfirmation";
 import CashierPrescriptions from "./features/cashier/Prescriptions";
 import CashierHistory from "./features/cashier/History";
 
-
+// Delivery Agent
+import AgentDeliveries from "./features/deliveryAgent/Deliveries";
+import AgentHistory from "./features/deliveryAgent/AgentHistory";
 
 // Platform Admin
 import PlatformDashboard from "./features/platformAdmin/Dashboard";
@@ -43,6 +45,7 @@ function getInitialRole() {
       if (u.role === "PLATFORM_ADMIN") return "platform_admin";
       if (u.role === "PHARMACY_ADMIN") return "pharmacy_admin";
       if (u.role === "CASHIER") return "cashier";
+      if (u.role === "DELIVERY_AGENT") return "delivery_agent";
     }
   } catch (_) {}
   return "pharmacy_admin";
@@ -54,6 +57,7 @@ function RootRedirect() {
   if (!token) return <Navigate to="/login" replace />;
   if (role === "platform_admin") return <Navigate to="/platform-admin/dashboard" replace />;
   if (role === "cashier") return <Navigate to="/cashier/confirmation" replace />;
+  if (role === "delivery_agent") return <Navigate to="/agent/deliveries" replace />;
   return <Navigate to="/pharmacy-admin/dashboard" replace />;
 }
 
@@ -88,7 +92,13 @@ function App() {
               <Route path="messaging" element={<MessagingPage />} />
             </Route>
 
-
+            {/* Delivery Agent */}
+            <Route path="/agent" element={<DashboardLayout />}>
+              <Route path="deliveries" element={<AgentDeliveries />} />
+              <Route path="history" element={<AgentHistory />} />
+              <Route path="messaging" element={<MessagingPage />} />
+              <Route path="settings" element={<PharmSettings />} />
+            </Route>
 
             {/* Platform Admin */}
             <Route path="/platform-admin" element={<DashboardLayout />}>

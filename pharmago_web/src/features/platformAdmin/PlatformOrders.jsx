@@ -1,11 +1,23 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  Search, Filter, Download, TrendingUp, ShoppingBag,
-  Clock, CheckCircle, XCircle, Truck, RefreshCw, Eye, MapPin, FileText
+  Search,
+  Filter,
+  Download,
+  TrendingUp,
+  ShoppingBag,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Truck,
+  RefreshCw,
+  Eye,
+  MapPin,
+  FileText,
+  Loader2,
+  Building2,
 } from "lucide-react";
-import { orders, pharmacies } from "../../mockData/index";
-import { useT } from "../../i18n/TranslationContext";
-import { useLang } from "../../i18n/TranslationContext";
+import { useT, useLang } from "../../i18n/TranslationContext";
+import { apiGetOrders, normalizeOrder } from "../../utils/api";
 import StatusBadge from "../../components/shared/StatusBadge";
 import { PageHeader, Card, TableWrapper, Th, Td } from "../../components/shared/UI";
 import { timeAgo, formatFCFA, getInitials } from "../../utils/timeUtils";
@@ -14,14 +26,16 @@ import { exportToCSV } from "../../utils/exportUtils";
 // Status icons map
 const STATUS_META = {
   en_attente: { color: "#E8A33D", bg: "#FEF3DC", icon: Clock },
-  confirme:   { color: "#2563EB", bg: "#DBEAFE", icon: CheckCircle },
-  en_route:   { color: "#7C3AED", bg: "#EDE9FE", icon: Truck },
-  livree:     { color: "#16A34A", bg: "#DCFCE7", icon: CheckCircle },
-  rejete:     { color: "#DC2626", bg: "#FEE2E2", icon: XCircle },
+  confirme: { color: "#2563EB", bg: "#DBEAFE", icon: CheckCircle },
+  en_preparation: { color: "#0F9B8E", bg: "#E6F7F6", icon: ShoppingBag },
+  pret: { color: "#059669", bg: "#D1FAE5", icon: CheckCircle },
+  en_route: { color: "#7C3AED", bg: "#EDE9FE", icon: Truck },
+  livree: { color: "#16A34A", bg: "#DCFCE7", icon: CheckCircle },
+  rejete: { color: "#DC2626", bg: "#FEE2E2", icon: XCircle },
 };
 
-const ALL_STATUSES = ["all", "en_attente", "confirme", "en_route", "livree", "rejete"];
-const ALL_TYPES    = ["all", "livraison", "retrait"];
+const ALL_STATUSES = ["all", "en_attente", "confirme", "en_preparation", "pret", "en_route", "livree", "rejete"];
+const ALL_TYPES = ["all", "livraison", "retrait"];
 
 function OrderDetailModal({ order, onClose, t, lang }) {
   if (!order) return null;
@@ -53,8 +67,8 @@ function OrderDetailModal({ order, onClose, t, lang }) {
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
-          {/* Client */}
+        <div className="p-5 space-y-5 max-h-[75vh] overflow-y-auto">
+          {/* Pharmacy & Client */}
           <div className="flex items-center gap-3">
             <div
               className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold font-sora shrink-0"
@@ -63,34 +77,67 @@ function OrderDetailModal({ order, onClose, t, lang }) {
               {getInitials(order.client)}
             </div>
             <div>
-              <p className="font-semibold" style={{ color: "#0D3B36" }}>{order.client}</p>
+              <p className="font-semibold" style={{ color: "#0D3B36" }}>
+                {order.client}
+              </p>
               <p className="text-sm text-gray-400">{order.phone}</p>
               {order.address && (
                 <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                  <MapPin size={10} />  {order.address}
+                  <MapPin size={10} /> {order.address}
                 </p>
               )}
             </div>
             <div className="ml-auto flex flex-col items-end gap-1">
               <StatusBadge status={order.status} />
-              <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${order.type === "livraison" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
-                {order.type === "livraison" ? (isFr ? "Livraison" : "Delivery") : (isFr ? "Retrait" : "Pickup")}
+              <span
+                className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                  order.type === "livraison"
+                    ? "bg-blue-50 text-blue-700"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {order.type === "livraison"
+                  ? isFr
+                    ? "Livraison"
+                    : "Delivery"
+                  : isFr
+                  ? "Retrait"
+                  : "Pickup"}
               </span>
+            </div>
+          </div>
+
+          {/* Pharmacy info */}
+          <div className="p-3 rounded-xl border flex items-center gap-3" style={{ borderColor: "#DCE6E2", background: "#FBFBFA" }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "#E6F7F6" }}>
+              <Building2 size={16} style={{ color: "#0F9B8E" }} />
+            </div>
+            <div className="text-xs">
+              <p className="text-gray-400">{isFr ? "Pharmacie dispensatrice" : "Dispensing Pharmacy"}</p>
+              <p className="font-semibold" style={{ color: "#0D3B36" }}>{order.pharmacy || "—"}</p>
             </div>
           </div>
 
           {/* Drug list */}
           <div className="p-4 rounded-xl" style={{ background: "#F6F5EF" }}>
             <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
-              <ShoppingBag size={12} />  {isFr ? "Médicaments commandés" : "Medications ordered"}
+              <ShoppingBag size={12} /> {isFr ? "Médicaments commandés" : "Medications ordered"}
             </p>
             <div className="space-y-2">
-              {order.drugs.map((d, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <span className="text-sm font-medium" style={{ color: "#0D3B36" }}>{d.name}</span>
-                  <span className="text-sm text-gray-500 font-semibold">×{d.qty}</span>
-                </div>
-              ))}
+              {order.drugs && order.drugs.length > 0 ? (
+                order.drugs.map((d, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-sm font-medium" style={{ color: "#0D3B36" }}>
+                      {d.name}
+                    </span>
+                    <span className="text-sm text-gray-500 font-semibold">×{d.qty}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-gray-500 italic">
+                  {order.drugsSummary || (isFr ? "Articles sur ordonnance" : "Prescription items")}
+                </p>
+              )}
             </div>
           </div>
 
@@ -99,12 +146,16 @@ function OrderDetailModal({ order, onClose, t, lang }) {
             <div>
               <p className="text-xs text-gray-400">{isFr ? "Total commande" : "Order total"}</p>
               <p className="text-2xl font-bold font-sora" style={{ color: "#0D3B36" }}>
-                {order.total.toLocaleString()} <span className="text-base text-gray-400 font-normal">FCFA</span>
+                {(order.total || 0).toLocaleString()}{" "}
+                <span className="text-base text-gray-400 font-normal">FCFA</span>
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                {order.paymentMethod === "CASH" ? "Paiement : Espèces (Cash)" : "Paiement : Mobile Money"}
               </p>
             </div>
             {order.hasPrescription && (
               <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-sm font-semibold">
-                <FileText size={14} />  {isFr ? "Ordonnance jointe" : "Rx attached"}
+                <FileText size={14} /> {isFr ? "Ordonnance jointe" : "Rx attached"}
               </span>
             )}
           </div>
@@ -119,106 +170,213 @@ export default function PlatformOrders() {
   const { lang } = useLang();
   const isFr = lang === "fr";
 
-  const [search, setSearch]         = useState("");
-  const [statusFilter, setStatus]   = useState("all");
-  const [typeFilter, setType]       = useState("all");
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatus] = useState("all");
+  const [typeFilter, setType] = useState("all");
   const [selectedOrder, setSelected] = useState(null);
 
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const data = await apiGetOrders();
+      setOrders((data.orders || []).map(normalizeOrder));
+    } catch (err) {
+      console.error("Failed to fetch platform orders:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrders();
+    const interval = setInterval(() => fetchOrders(true), 30_000);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
+
   // KPI summary
-  const kpis = useMemo(() => ({
-    total:     orders.length,
-    pending:   orders.filter(o => o.status === "en_attente").length,
-    enRoute:   orders.filter(o => o.status === "en_route").length,
-    delivered: orders.filter(o => o.status === "livree").length,
-    revenue:   orders.filter(o => o.status !== "rejete").reduce((s, o) => s + o.total, 0),
-  }), []);
+  const kpis = useMemo(
+    () => ({
+      total: orders.length,
+      pending: orders.filter((o) => o.status === "en_attente").length,
+      enRoute: orders.filter((o) => o.status === "en_route").length,
+      delivered: orders.filter((o) => o.status === "livree").length,
+      revenue: orders
+        .filter((o) => o.status !== "rejete")
+        .reduce((s, o) => s + (o.total || 0), 0),
+    }),
+    [orders]
+  );
 
   // Filtered list
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return orders.filter(o => {
+    return orders.filter((o) => {
       if (statusFilter !== "all" && o.status !== statusFilter) return false;
-      if (typeFilter   !== "all" && o.type   !== typeFilter)   return false;
+      if (typeFilter !== "all" && o.type !== typeFilter) return false;
       if (q) {
-        const matchId     = o.id.toLowerCase().includes(q);
-        const matchClient = o.client.toLowerCase().includes(q);
-        const matchDrug   = o.drugs.some(d => d.name.toLowerCase().includes(q));
-        if (!matchId && !matchClient && !matchDrug) return false;
+        const matchId = (o.id || "").toLowerCase().includes(q);
+        const matchClient = (o.client || "").toLowerCase().includes(q);
+        const matchPharmacy = (o.pharmacy || "").toLowerCase().includes(q);
+        const matchDrug =
+          o.drugs && o.drugs.some((d) => d.name.toLowerCase().includes(q));
+        if (!matchId && !matchClient && !matchPharmacy && !matchDrug) return false;
       }
       return true;
     });
-  }, [search, statusFilter, typeFilter]);
+  }, [orders, search, statusFilter, typeFilter]);
 
   const handleExport = () => {
-    const headers = ["ID", isFr ? "Client" : "Client", isFr ? "Téléphone" : "Phone",
-      isFr ? "Médicaments" : "Medications", isFr ? "Total (FCFA)" : "Total (FCFA)",
-      isFr ? "Type" : "Type", isFr ? "Statut" : "Status", isFr ? "Date" : "Date"];
-    const rows = filtered.map(o => [
-      o.id, o.client, o.phone,
-      o.drugs.map(d => `${d.name} ×${d.qty}`).join(" | "),
-      o.total, o.type, o.status,
+    const headers = [
+      "ID",
+      isFr ? "Client" : "Client",
+      isFr ? "Téléphone" : "Phone",
+      isFr ? "Pharmacie" : "Pharmacy",
+      isFr ? "Médicaments" : "Medications",
+      isFr ? "Total (FCFA)" : "Total (FCFA)",
+      isFr ? "Type" : "Type",
+      isFr ? "Statut" : "Status",
+      isFr ? "Date" : "Date",
+    ];
+    const rows = filtered.map((o) => [
+      o.id,
+      o.client,
+      o.phone,
+      o.pharmacy,
+      o.drugs && o.drugs.length > 0
+        ? o.drugs.map((d) => `${d.name} ×${d.qty}`).join(" | ")
+        : o.drugsSummary || "—",
+      o.total,
+      o.type,
+      o.status,
       new Date(o.createdAt).toLocaleDateString(isFr ? "fr-CM" : "en-CM"),
     ]);
-    exportToCSV(headers, rows, `pharmago_orders_${new Date().toISOString().slice(0,10)}`);
+    exportToCSV(headers, rows, `pharmago_orders_${new Date().toISOString().slice(0, 10)}`);
   };
 
   const statusLabel = {
-    all:         isFr ? "Tous"            : "All",
-    en_attente:  isFr ? "En attente"      : "Pending",
-    confirme:    isFr ? "Confirmées"      : "Confirmed",
-    en_route:    isFr ? "En route"        : "In transit",
-    livree:      isFr ? "Livrées"         : "Delivered",
-    rejete:      isFr ? "Rejetées"        : "Rejected",
+    all: isFr ? "Tous" : "All",
+    en_attente: isFr ? "En attente" : "Pending",
+    confirme: isFr ? "Confirmées" : "Confirmed",
+    en_preparation: isFr ? "En préparation" : "Preparing",
+    pret: isFr ? "Prêt" : "Ready",
+    en_route: isFr ? "En route" : "In transit",
+    livree: isFr ? "Livrées" : "Delivered",
+    rejete: isFr ? "Rejetées" : "Rejected",
   };
 
   return (
     <div className="animate-fade-in-up">
       <PageHeader
         title={isFr ? "Toutes les Commandes" : "All Orders"}
-        subtitle={isFr ? "Supervision globale des commandes sur la plateforme" : "Global order supervision across the platform"}
+        subtitle={
+          isFr
+            ? "Supervision globale des commandes en temps réel sur la plateforme"
+            : "Real-time global order supervision across the platform"
+        }
         action={
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity"
-            style={{ background: "#0F9B8E" }}
-          >
-            <Download size={15} /> {isFr ? "Exporter CSV" : "Export CSV"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => fetchOrders(true)}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-gray-50 transition-all"
+              style={{ borderColor: "#DCE6E2", color: "#0D3B36" }}
+            >
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+              {isFr ? "Actualiser" : "Refresh"}
+            </button>
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity"
+              style={{ background: "#0F9B8E" }}
+            >
+              <Download size={15} /> {isFr ? "Exporter CSV" : "Export CSV"}
+            </button>
+          </div>
         }
       />
 
       {/* KPI Banner */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         {[
-          { label: isFr ? "Total commandes" : "Total orders",   value: kpis.total,     color: "#0D3B36", bg: "#F0F7F6", icon: ShoppingBag },
-          { label: isFr ? "En attente"      : "Pending",        value: kpis.pending,   color: "#E8A33D", bg: "#FEF3DC", icon: Clock },
-          { label: isFr ? "En livraison"    : "In transit",     value: kpis.enRoute,   color: "#7C3AED", bg: "#EDE9FE", icon: Truck },
-          { label: isFr ? "Livrées"         : "Delivered",      value: kpis.delivered, color: "#16A34A", bg: "#DCFCE7", icon: CheckCircle },
-          { label: isFr ? "Revenu total"    : "Total revenue",  value: formatFCFA(kpis.revenue), color: "#0F9B8E", bg: "#E6F7F6", icon: TrendingUp },
+          {
+            label: isFr ? "Total commandes" : "Total orders",
+            value: kpis.total,
+            color: "#0D3B36",
+            bg: "#F0F7F6",
+            icon: ShoppingBag,
+          },
+          {
+            label: isFr ? "En attente" : "Pending",
+            value: kpis.pending,
+            color: "#E8A33D",
+            bg: "#FEF3DC",
+            icon: Clock,
+          },
+          {
+            label: isFr ? "En livraison" : "In transit",
+            value: kpis.enRoute,
+            color: "#7C3AED",
+            bg: "#EDE9FE",
+            icon: Truck,
+          },
+          {
+            label: isFr ? "Livrées" : "Delivered",
+            value: kpis.delivered,
+            color: "#16A34A",
+            bg: "#DCFCE7",
+            icon: CheckCircle,
+          },
+          {
+            label: isFr ? "Revenu total" : "Total revenue",
+            value: formatFCFA(kpis.revenue),
+            color: "#0F9B8E",
+            bg: "#E6F7F6",
+            icon: TrendingUp,
+          },
         ].map((kpi, i) => (
-          <div key={i} className={`rounded-xl p-3 border card-hover animate-fade-in-up delay-${i * 75}`}
-            style={{ background: "white", borderColor: "#DCE6E2" }}>
+          <div
+            key={i}
+            className={`rounded-xl p-3 border card-hover animate-fade-in-up delay-${i * 75}`}
+            style={{ background: "white", borderColor: "#DCE6E2" }}
+          >
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: kpi.bg }}>
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{ background: kpi.bg }}
+              >
                 <kpi.icon size={14} style={{ color: kpi.color }} />
               </div>
               <p className="text-xs text-gray-400 font-medium">{kpi.label}</p>
             </div>
-            <p className="text-lg font-bold font-sora" style={{ color: kpi.color }}>{kpi.value}</p>
+            <p className="text-lg font-bold font-sora" style={{ color: kpi.color }}>
+              {kpi.value}
+            </p>
           </div>
         ))}
       </div>
 
       <Card>
         {/* Filter Bar */}
-        <div className="p-4 border-b flex flex-wrap items-center gap-3" style={{ borderColor: "#DCE6E2" }}>
+        <div
+          className="p-4 border-b flex flex-wrap items-center gap-3"
+          style={{ borderColor: "#DCE6E2" }}
+        >
           {/* Search */}
           <div className="relative flex-1 min-w-[200px]">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={isFr ? "Rechercher par ID, client, médicament..." : "Search by ID, client, medication..."}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={
+                isFr
+                  ? "Rechercher par ID, client, pharmacie, médicament..."
+                  : "Search by ID, client, pharmacy, medication..."
+              }
               className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border outline-none focus:border-[#0F9B8E] focus:ring-2 focus:ring-[#0F9B8E]/15 transition-all"
               style={{ borderColor: "#DCE6E2", background: "#FBFBFA" }}
             />
@@ -227,15 +385,20 @@ export default function PlatformOrders() {
           {/* Status filter */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <Filter size={14} className="text-gray-400 shrink-0" />
-            {ALL_STATUSES.map(s => (
-              <button key={s}
+            {ALL_STATUSES.map((s) => (
+              <button
+                key={s}
                 onClick={() => setStatus(s)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   statusFilter === s
                     ? "text-white shadow-sm"
                     : "text-gray-500 bg-gray-100 hover:bg-gray-200"
                 }`}
-                style={statusFilter === s ? { background: STATUS_META[s]?.color || "#0F9B8E" } : {}}
+                style={
+                  statusFilter === s
+                    ? { background: STATUS_META[s]?.color || "#0F9B8E" }
+                    : {}
+                }
               >
                 {statusLabel[s]}
               </button>
@@ -244,8 +407,9 @@ export default function PlatformOrders() {
 
           {/* Type filter */}
           <div className="flex items-center gap-1.5">
-            {ALL_TYPES.map(tp => (
-              <button key={tp}
+            {ALL_TYPES.map((tp) => (
+              <button
+                key={tp}
                 onClick={() => setType(tp)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   typeFilter === tp
@@ -253,7 +417,17 @@ export default function PlatformOrders() {
                     : "text-gray-500 bg-gray-100 hover:bg-gray-200"
                 }`}
               >
-                {tp === "all" ? (isFr ? "Tous" : "All") : tp === "livraison" ? (isFr ? "Livraison" : "Delivery") : (isFr ? "Retrait" : "Pickup")}
+                {tp === "all"
+                  ? isFr
+                    ? "Tous"
+                    : "All"
+                  : tp === "livraison"
+                  ? isFr
+                    ? "Livraison"
+                    : "Delivery"
+                  : isFr
+                  ? "Retrait"
+                  : "Pickup"}
               </button>
             ))}
           </div>
@@ -264,7 +438,14 @@ export default function PlatformOrders() {
         </div>
 
         {/* Table */}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="py-20 flex flex-col items-center gap-3">
+            <Loader2 size={36} className="animate-spin" style={{ color: "#0F9B8E" }} />
+            <p className="font-semibold text-gray-400">
+              {isFr ? "Chargement des commandes globales…" : "Loading global orders…"}
+            </p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="py-20 flex flex-col items-center gap-3">
             <RefreshCw size={40} className="text-gray-200" />
             <p className="font-semibold text-gray-400">
@@ -280,6 +461,7 @@ export default function PlatformOrders() {
               <tr>
                 <Th>{isFr ? "N° Commande" : "Order #"}</Th>
                 <Th>{isFr ? "Client" : "Client"}</Th>
+                <Th>{isFr ? "Pharmacie" : "Pharmacy"}</Th>
                 <Th>{isFr ? "Médicaments" : "Medications"}</Th>
                 <Th>{isFr ? "Total" : "Total"}</Th>
                 <Th>{isFr ? "Type" : "Type"}</Th>
@@ -293,18 +475,23 @@ export default function PlatformOrders() {
                 const meta = STATUS_META[o.status] || {};
                 return (
                   <tr
-                    key={o.id}
-                    className={`table-row-hover border-b transition-colors animate-fade-in-up`}
-                    style={{ borderColor: "#F0F0F0", animationDelay: `${idx * 30}ms` }}
+                    key={o._id || o.id}
+                    className="table-row-hover border-b transition-colors animate-fade-in-up"
+                    style={{ borderColor: "#F0F0F0", animationDelay: `${idx * 25}ms` }}
                   >
                     <Td>
                       <div className="flex items-center gap-2">
                         {meta.icon && (
-                          <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: meta.bg }}>
+                          <div
+                            className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                            style={{ background: meta.bg }}
+                          >
                             <meta.icon size={12} style={{ color: meta.color }} />
                           </div>
                         )}
-                        <span className="font-mono font-semibold text-sm" style={{ color: "#0F9B8E" }}>{o.id}</span>
+                        <span className="font-mono font-semibold text-sm" style={{ color: "#0F9B8E" }}>
+                          {o.id}
+                        </span>
                       </div>
                     </Td>
                     <Td>
@@ -316,14 +503,23 @@ export default function PlatformOrders() {
                           {getInitials(o.client)}
                         </div>
                         <div>
-                          <p className="font-medium text-sm" style={{ color: "#0D3B36" }}>{o.client}</p>
+                          <p className="font-medium text-sm" style={{ color: "#0D3B36" }}>
+                            {o.client}
+                          </p>
                           <p className="text-xs text-gray-400">{o.phone}</p>
                         </div>
                       </div>
                     </Td>
                     <Td>
-                      <p className="text-xs text-gray-600 max-w-[180px]">
-                        {o.drugs.map(d => `${d.name} ×${d.qty}`).join(", ")}
+                      <p className="text-xs font-semibold" style={{ color: "#0D3B36" }}>
+                        {o.pharmacy || "—"}
+                      </p>
+                    </Td>
+                    <Td>
+                      <p className="text-xs text-gray-600 max-w-[180px] truncate">
+                        {o.drugs && o.drugs.length > 0
+                          ? o.drugs.map((d) => `${d.name} ×${d.qty}`).join(", ")
+                          : o.drugsSummary || "—"}
                       </p>
                       {o.hasPrescription && (
                         <span className="text-[10px] text-purple-600 flex items-center gap-0.5 mt-0.5">
@@ -333,23 +529,39 @@ export default function PlatformOrders() {
                     </Td>
                     <Td>
                       <span className="font-bold text-sm" style={{ color: "#0D3B36" }}>
-                        {o.total.toLocaleString()} <span className="text-xs font-normal text-gray-400">FCFA</span>
+                        {(o.total || 0).toLocaleString()}{" "}
+                        <span className="text-xs font-normal text-gray-400">FCFA</span>
                       </span>
                     </Td>
                     <Td>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        o.type === "livraison" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-600"
-                      }`}>
-                        {o.type === "livraison" ? (isFr ? "🚚 Livraison" : "🚚 Delivery") : (isFr ? "🏪 Retrait" : "🏪 Pickup")}
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          o.type === "livraison"
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {o.type === "livraison"
+                          ? isFr
+                            ? "🚚 Livraison"
+                            : "🚚 Delivery"
+                          : isFr
+                          ? "🏪 Retrait"
+                          : "🏪 Pickup"}
                       </span>
                     </Td>
-                    <Td><StatusBadge status={o.status} /></Td>
+                    <Td>
+                      <StatusBadge status={o.status} />
+                    </Td>
                     <Td>
                       <div>
                         <p className="text-xs text-gray-500">{timeAgo(o.createdAt, lang)}</p>
                         <p className="text-[10px] text-gray-300">
                           {new Date(o.createdAt).toLocaleString(isFr ? "fr-CM" : "en-CM", {
-                            hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short"
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            day: "2-digit",
+                            month: "short",
                           })}
                         </p>
                       </div>
@@ -371,11 +583,21 @@ export default function PlatformOrders() {
         )}
 
         {/* Table footer summary */}
-        {filtered.length > 0 && (
-          <div className="px-4 py-3 border-t flex items-center justify-between text-xs text-gray-400" style={{ borderColor: "#DCE6E2" }}>
-            <span>{filtered.length} {isFr ? "commandes affichées" : "orders displayed"}</span>
+        {!loading && filtered.length > 0 && (
+          <div
+            className="px-4 py-3 border-t flex items-center justify-between text-xs text-gray-400"
+            style={{ borderColor: "#DCE6E2" }}
+          >
+            <span>
+              {filtered.length} {isFr ? "commandes affichées" : "orders displayed"}
+            </span>
             <span className="font-semibold" style={{ color: "#0D3B36" }}>
-              {isFr ? "Total filtré" : "Filtered total"}: {formatFCFA(filtered.reduce((s, o) => s + o.total, 0))}
+              {isFr ? "Total filtré" : "Filtered total"}:{" "}
+              {formatFCFA(
+                filtered
+                  .filter((o) => o.status !== "rejete")
+                  .reduce((s, o) => s + (o.total || 0), 0)
+              )}
             </span>
           </div>
         )}

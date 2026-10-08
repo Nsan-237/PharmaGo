@@ -164,4 +164,63 @@ export const apiDeletePharmacy = (id) =>
     method: "DELETE",
   });
 
+// ── Delivery Agent API ─────────────────────────────────────────────────────
+export const apiGetAgentOrders = () => apiFetch("/agent/orders");
+
+export const apiAcceptOrder = (id) =>
+  apiFetch(`/agent/orders/${id}/accept`, { method: "PATCH" });
+
+export const apiMarkDelivered = (id) =>
+  apiFetch(`/agent/orders/${id}/deliver`, { method: "PATCH" });
+
+export const apiGetAgentStats = () => apiFetch("/agent/stats");
+
+// ── Status mapping helpers ──────────────────────────────────────────────────
+// API returns uppercase (PENDING, CONFIRMED…) but UI uses fr-style keys
+export const API_TO_UI_STATUS = {
+  PENDING:          "en_attente",
+  CONFIRMED:        "confirme",
+  PREPARING:        "en_preparation",
+  READY_FOR_PICKUP: "pret",
+  IN_TRANSIT:       "en_route",
+  DELIVERED:        "livree",
+  CANCELLED:        "rejete",
+};
+
+export const UI_TO_API_STATUS = {
+  en_attente:    "PENDING",
+  confirme:      "CONFIRMED",
+  en_preparation:"PREPARING",
+  pret:          "READY_FOR_PICKUP",
+  en_route:      "IN_TRANSIT",
+  livree:        "DELIVERED",
+  rejete:        "CANCELLED",
+};
+
+/** Normalize a raw API order to the shape the UI expects */
+export const normalizeOrder = (o) => ({
+  id:              o.orderNumber || o.id,
+  _id:             o.id,
+  orderId:         o.orderNumber || o.id,
+  client:          o.patient?.fullName  || "—",
+  phone:           o.patient?.phone     || "—",
+  address:         o.deliveryAddress    || "",
+  drugs:           (o.items || []).map(i => ({ name: i.productName, qty: i.quantity })),
+  drugsSummary:    (o.items || []).map(i => `${i.productName} (x${i.quantity})`).join(", "),
+  total:           o.totalAmount        || 0,
+  type:            o.deliveryAddress    ? "livraison" : "retrait",
+  status:          API_TO_UI_STATUS[o.status] || "en_attente",
+  apiStatus:       o.status,
+  hasPrescription: !!o.prescriptionId,
+  pharmacy:        o.pharmacy?.name     || "—",
+  pharmacyPhone:   o.pharmacy?.phone    || "—",
+  pharmacyAddress: o.pharmacy?.address  || "—",
+  pharmacyId:      o.pharmacyId,
+  deliveryAgentId: o.deliveryAgentId    || null,
+  deliveryAgentName: o.deliveryAgent?.fullName || "—",
+  paymentMethod:   o.paymentMethod,
+  paymentStatus:   o.paymentStatus,
+  createdAt:       o.createdAt,
+  updatedAt:       o.updatedAt,
+});
 

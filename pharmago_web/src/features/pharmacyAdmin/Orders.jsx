@@ -1,46 +1,50 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Download, FileText, CheckCircle, XCircle, Truck,
-  PackageCheck, Clock, Eye, AlertTriangle, X
+  PackageCheck, Clock, AlertTriangle, X, RefreshCw, Loader2
 } from "lucide-react";
-import { orders as initialOrders } from "../../mockData/index";
 import { useT } from "../../i18n/TranslationContext";
 import { useLang } from "../../i18n/TranslationContext";
 import { exportToCSV, exportToPDF } from "../../utils/exportUtils";
-import { apiUpdateOrderStatus } from "../../utils/api";
+import { apiGetOrders, apiUpdateOrderStatus, normalizeOrder, UI_TO_API_STATUS } from "../../utils/api";
 import { useToast } from "../../components/shared/Toast";
 import StatusBadge from "../../components/shared/StatusBadge";
 import { timeAgo, getInitials } from "../../utils/timeUtils";
-import { PageHeader, Card, TableWrapper, Th, Td, Modal, SecondaryButton } from "../../components/shared/UI";
+import { PageHeader, Card, TableWrapper, Th, Td, SecondaryButton } from "../../components/shared/UI";
 
-// Status progression flow:  en_attente → confirme → en_route → livree
-// Can also be rejected at any point before livree
-
+// Status progression flow (UI keys)
+// en_attente → confirme → en_preparation → pret → en_route → livree
+// Can also be rejected (rejete) at any point before livree
 const ACTIONS = {
-  en_attente:  ["confirme", "rejete"],
-  confirme:    ["en_route", "rejete"],
-  en_route:    ["livree"],
-  livree:      [],
-  rejete:      [],
+  en_attente:    ["confirme", "rejete"],
+  confirme:      ["en_preparation", "rejete"],
+  en_preparation:["pret", "rejete"],
+  pret:          ["rejete"],
+  en_route:      ["livree"],
+  livree:        [],
+  rejete:        [],
 };
 
 const ACTION_META = {
-  confirme:  { icon: CheckCircle, label: { fr: "Confirmer",       en: "Confirm"       }, color: "#16A34A", bg: "#DCFCE7" },
-  en_route:  { icon: Truck,       label: { fr: "Mettre en route", en: "Mark en route" }, color: "#2563EB", bg: "#DBEAFE" },
-  livree:    { icon: PackageCheck,label: { fr: "Marquer livrée",  en: "Mark delivered"}, color: "#0F9B8E", bg: "#E6F7F6" },
-  rejete:    { icon: XCircle,     label: { fr: "Rejeter",         en: "Reject"        }, color: "#DC2626", bg: "#FEE2E2" },
+  confirme:       { icon: CheckCircle,  label: { fr: "Confirmer",          en: "Confirm"          }, color: "#16A34A", bg: "#DCFCE7" },
+  en_preparation: { icon: PackageCheck, label: { fr: "En préparation",     en: "Start preparing"  }, color: "#7C3AED", bg: "#EDE9FE" },
+  pret:           { icon: PackageCheck, label: { fr: "Prêt pour livraison",en: "Ready for pickup" }, color: "#2563EB", bg: "#DBEAFE" },
+  en_route:       { icon: Truck,        label: { fr: "Mettre en route",     en: "Mark en route"   }, color: "#2563EB", bg: "#DBEAFE" },
+  livree:         { icon: PackageCheck, label: { fr: "Marquer livrée",      en: "Mark delivered"  }, color: "#0F9B8E", bg: "#E6F7F6" },
+  rejete:         { icon: XCircle,      label: { fr: "Annuler",             en: "Cancel"           }, color: "#DC2626", bg: "#FEE2E2" },
 };
 
 const TABS = [
-  { key: "all",        labelFr: "Toutes",         labelEn: "All" },
-  { key: "en_attente", labelFr: "En attente",     labelEn: "Pending" },
-  { key: "confirme",   labelFr: "Confirmées",     labelEn: "Confirmed" },
-  { key: "en_route",   labelFr: "En route",       labelEn: "In transit" },
-  { key: "livree",     labelFr: "Livrées",        labelEn: "Delivered" },
-  { key: "rejete",     labelFr: "Rejetées",       labelEn: "Rejected" },
+  { key: "all",           labelFr: "Toutes",           labelEn: "All" },
+  { key: "en_attente",    labelFr: "En attente",        labelEn: "Pending" },
+  { key: "confirme",      labelFr: "Confirmées",        labelEn: "Confirmed" },
+  { key: "en_preparation",labelFr: "En préparation",    labelEn: "Preparing" },
+  { key: "pret",          labelFr: "Prêtes",            labelEn: "Ready" },
+  { key: "en_route",      labelFr: "En route",          labelEn: "In transit" },
+  { key: "livree",        labelFr: "Livrées",           labelEn: "Delivered" },
+  { key: "rejete",        labelFr: "Annulées",          labelEn: "Cancelled" },
 ];
 
-// Reject reason modal component
 function RejectModal({ order, onConfirm, onClose, isFr }) {
   const [reason, setReason] = useState("");
   if (!order) return null;
@@ -56,7 +60,7 @@ function RejectModal({ order, onConfirm, onClose, isFr }) {
       >
         <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: "#DCE6E2" }}>
           <p className="font-bold font-sora" style={{ color: "#0D3B36" }}>
-            {isFr ? "Rejeter la commande" : "Reject order"}
+            {isFr ? "Annuler la commande" : "Cancel order"}
           </p>
           <button onClick={onClose} className="p-1 rounded text-gray-400 hover:text-gray-600">
             <X size={16} />
@@ -71,7 +75,7 @@ function RejectModal({ order, onConfirm, onClose, isFr }) {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5" style={{ color: "#0D3B36" }}>
-              {isFr ? "Motif du rejet (optionnel)" : "Rejection reason (optional)"}
+              {isFr ? "Motif de l'annulation (optionnel)" : "Cancellation reason (optional)"}
             </label>
             <textarea
               value={reason}
@@ -84,13 +88,13 @@ function RejectModal({ order, onConfirm, onClose, isFr }) {
           </div>
           <div className="flex gap-3">
             <SecondaryButton onClick={onClose} className="flex-1 justify-center">
-              {isFr ? "Annuler" : "Cancel"}
+              {isFr ? "Retour" : "Cancel"}
             </SecondaryButton>
             <button
               onClick={() => onConfirm(reason)}
               className="flex-1 py-2.5 rounded-lg text-white font-semibold text-sm bg-red-500 hover:bg-red-600 transition-all active:scale-95"
             >
-              {isFr ? "Confirmer le rejet" : "Confirm rejection"}
+              {isFr ? "Confirmer l'annulation" : "Confirm cancellation"}
             </button>
           </div>
         </div>
@@ -100,37 +104,69 @@ function RejectModal({ order, onConfirm, onClose, isFr }) {
 }
 
 export default function PharmaOrders() {
-  const t = useT();
   const { lang } = useLang();
   const isFr = lang === "fr";
   const toast = useToast();
 
-  const [orders, setOrders] = useState(initialOrders);
-  const [filter, setFilter] = useState("all");
+  const [orders, setOrders]         = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter]         = useState("all");
   const [rejectTarget, setRejectTarget] = useState(null);
+
+  // ── Fetch real orders from API ─────────────────────────────────────────────
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const data = await apiGetOrders();
+      setOrders((data.orders || []).map(normalizeOrder));
+    } catch (err) {
+      if (!silent) toast.error(
+        isFr ? "Impossible de charger les commandes." : "Failed to load orders.",
+        isFr ? "Erreur réseau" : "Network error"
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [isFr]);
+
+  useEffect(() => {
+    fetchOrders();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => fetchOrders(true), 30_000);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
 
   const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
 
   // ── Status Action ──────────────────────────────────────────────────────────
-  const applyStatus = async (id, newStatus, reason = "") => {
+  const applyStatus = async (id, newUiStatus, reason = "") => {
+    const apiStatus = UI_TO_API_STATUS[newUiStatus];
+    const order = orders.find(o => o.id === id || o._id === id);
+    const dbId = order?._id || id;
     try {
-      await apiUpdateOrderStatus(id, { status: newStatus, reason });
-    } catch (_) {}
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
-
-    const meta = ACTION_META[newStatus];
-    const order = orders.find(o => o.id === id);
-    if (newStatus === "rejete") {
-      toast.warning(
-        isFr ? `Commande ${id} rejetée.` : `Order ${id} rejected.`,
-        isFr ? "Commande rejetée" : "Order rejected"
-      );
-    } else {
-      toast.success(
-        isFr
-          ? `Commande ${id} — statut mis à jour : ${meta?.label.fr}.`
-          : `Order ${id} — status updated: ${meta?.label.en}.`,
-        isFr ? "Statut mis à jour" : "Status updated"
+      await apiUpdateOrderStatus(dbId, { status: apiStatus });
+      setOrders(prev => prev.map(o =>
+        (o.id === id || o._id === id) ? { ...o, status: newUiStatus, apiStatus } : o
+      ));
+      const meta = ACTION_META[newUiStatus];
+      if (newUiStatus === "rejete") {
+        toast.warning(
+          isFr ? `Commande ${id} annulée.` : `Order ${id} cancelled.`,
+          isFr ? "Commande annulée" : "Order cancelled"
+        );
+      } else {
+        toast.success(
+          isFr ? `Statut mis à jour : ${meta?.label.fr}.` : `Status updated: ${meta?.label.en}.`,
+          isFr ? "Statut mis à jour" : "Status updated"
+        );
+      }
+    } catch (err) {
+      toast.error(
+        isFr ? "Impossible de mettre à jour le statut." : "Failed to update status.",
+        "Error"
       );
     }
     setRejectTarget(null);
@@ -162,6 +198,17 @@ export default function PharmaOrders() {
       <PageHeader
         title={isFr ? "Gestion des Commandes" : "Order Management"}
         subtitle={isFr ? `${orders.length} commandes au total` : `${orders.length} total orders`}
+        action={
+          <button
+            onClick={() => fetchOrders(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-gray-50 transition-all"
+            style={{ borderColor: "#DCE6E2", color: "#0D3B36" }}
+          >
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+            {isFr ? "Actualiser" : "Refresh"}
+          </button>
+        }
       />
 
       {/* Tab + Export bar */}
@@ -195,7 +242,12 @@ export default function PharmaOrders() {
       </div>
 
       <Card>
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="py-20 flex flex-col items-center gap-3">
+            <Loader2 size={36} className="animate-spin" style={{ color: "#0F9B8E" }} />
+            <p className="text-gray-400 font-medium">{isFr ? "Chargement des commandes…" : "Loading orders…"}</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="py-20 text-center">
             <Clock size={44} className="mx-auto text-gray-200 mb-3" />
             <p className="font-semibold text-gray-400">
@@ -220,7 +272,7 @@ export default function PharmaOrders() {
               {filtered.map((o, idx) => {
                 const actions = ACTIONS[o.status] || [];
                 return (
-                  <tr key={o.id}
+                  <tr key={o._id || o.id}
                     className="table-row-hover border-b animate-fade-in-up"
                     style={{ borderColor: "#F0F0F0", animationDelay: `${idx * 25}ms` }}
                   >
@@ -286,7 +338,7 @@ export default function PharmaOrders() {
           </TableWrapper>
         )}
 
-        {filtered.length > 0 && (
+        {!loading && filtered.length > 0 && (
           <div className="px-4 py-3 border-t flex items-center justify-between text-xs text-gray-400" style={{ borderColor: "#DCE6E2" }}>
             <span>{filtered.length} {isFr ? "commandes affichées" : "orders shown"}</span>
             <span className="font-semibold" style={{ color: "#0D3B36" }}>
@@ -296,7 +348,7 @@ export default function PharmaOrders() {
         )}
       </Card>
 
-      {/* Reject reason modal */}
+      {/* Cancel reason modal */}
       <RejectModal
         order={rejectTarget}
         onConfirm={reason => applyStatus(rejectTarget.id, "rejete", reason)}
